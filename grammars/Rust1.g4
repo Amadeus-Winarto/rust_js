@@ -70,7 +70,7 @@ string_literal: '"' (string_characters)* '"';
 
 string_characters: ~( '"' | '\\');
 
-type: 'i32' | 'f32' | 'bool' | 'char' | custom_type;
+type: 'i32' | 'f32' | 'bool' | 'char' | '()' | custom_type;
 custom_type: IDENTIFIER;
 
 print_macro: 'println!';
