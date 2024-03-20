@@ -4,6 +4,6 @@
     }
     let y: i32 = 6;
     {
-        const x: i32 = 5;
+        const x: i32 = y + 1;
     }
 }

@@ -1,6 +1,5 @@
-import { BlockContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
-import { Validator, Scope, printScopes } from './types';
+import { Validator } from './types';
 import { print } from './utils';
 import { ErrorNode } from 'antlr4ts/tree/ErrorNode';
 
