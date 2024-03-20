@@ -14,8 +14,9 @@ import { If_expressionContext } from "./Rust1Parser";
 import { Cond_exprContext } from "./Rust1Parser";
 import { Function_applicationContext } from "./Rust1Parser";
 import { BlockContext } from "./Rust1Parser";
-import { ParametersContext } from "./Rust1Parser";
+import { Parameter_listContext } from "./Rust1Parser";
 import { ParameterContext } from "./Rust1Parser";
+import { ParametersContext } from "./Rust1Parser";
 import { Binary_operatorContext } from "./Rust1Parser";
 import { Unary_operatorContext } from "./Rust1Parser";
 import { Binary_logical_operatorContext } from "./Rust1Parser";
@@ -161,15 +162,15 @@ export interface Rust1Listener extends ParseTreeListener {
 	exitBlock?: (ctx: BlockContext) => void;
 
 	/**
-	 * Enter a parse tree produced by `Rust1Parser.parameters`.
+	 * Enter a parse tree produced by `Rust1Parser.parameter_list`.
 	 * @param ctx the parse tree
 	 */
-	enterParameters?: (ctx: ParametersContext) => void;
+	enterParameter_list?: (ctx: Parameter_listContext) => void;
 	/**
-	 * Exit a parse tree produced by `Rust1Parser.parameters`.
+	 * Exit a parse tree produced by `Rust1Parser.parameter_list`.
 	 * @param ctx the parse tree
 	 */
-	exitParameters?: (ctx: ParametersContext) => void;
+	exitParameter_list?: (ctx: Parameter_listContext) => void;
 
 	/**
 	 * Enter a parse tree produced by `Rust1Parser.parameter`.
@@ -181,6 +182,17 @@ export interface Rust1Listener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitParameter?: (ctx: ParameterContext) => void;
+
+	/**
+	 * Enter a parse tree produced by `Rust1Parser.parameters`.
+	 * @param ctx the parse tree
+	 */
+	enterParameters?: (ctx: ParametersContext) => void;
+	/**
+	 * Exit a parse tree produced by `Rust1Parser.parameters`.
+	 * @param ctx the parse tree
+	 */
+	exitParameters?: (ctx: ParametersContext) => void;
 
 	/**
 	 * Enter a parse tree produced by `Rust1Parser.binary_operator`.

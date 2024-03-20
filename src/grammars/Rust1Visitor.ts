@@ -14,8 +14,9 @@ import { If_expressionContext } from "./Rust1Parser";
 import { Cond_exprContext } from "./Rust1Parser";
 import { Function_applicationContext } from "./Rust1Parser";
 import { BlockContext } from "./Rust1Parser";
-import { ParametersContext } from "./Rust1Parser";
+import { Parameter_listContext } from "./Rust1Parser";
 import { ParameterContext } from "./Rust1Parser";
+import { ParametersContext } from "./Rust1Parser";
 import { Binary_operatorContext } from "./Rust1Parser";
 import { Unary_operatorContext } from "./Rust1Parser";
 import { Binary_logical_operatorContext } from "./Rust1Parser";
@@ -120,11 +121,11 @@ export interface Rust1Visitor<Result> extends ParseTreeVisitor<Result> {
 	visitBlock?: (ctx: BlockContext) => Result;
 
 	/**
-	 * Visit a parse tree produced by `Rust1Parser.parameters`.
+	 * Visit a parse tree produced by `Rust1Parser.parameter_list`.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	visitParameters?: (ctx: ParametersContext) => Result;
+	visitParameter_list?: (ctx: Parameter_listContext) => Result;
 
 	/**
 	 * Visit a parse tree produced by `Rust1Parser.parameter`.
@@ -132,6 +133,13 @@ export interface Rust1Visitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitParameter?: (ctx: ParameterContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `Rust1Parser.parameters`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitParameters?: (ctx: ParametersContext) => Result;
 
 	/**
 	 * Visit a parse tree produced by `Rust1Parser.binary_operator`.
