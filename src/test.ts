@@ -8,6 +8,7 @@ import { Validator } from './validators/types';
 
 import { SyntaxValidator } from './validators/syntax';
 import { DeclarationValidator } from './validators/declaration';
+import { TypeSystemValidator } from './validators/type_system';
 
 import { Compiler } from './compiler';
 
@@ -70,7 +71,9 @@ async function main() {
   // Build the list of validators
   const validators: Validator[] = [
     new SyntaxValidator(DEBUG_MODE),
-    new DeclarationValidator(DEBUG_MODE)];
+    new DeclarationValidator(DEBUG_MODE),
+    new TypeSystemValidator(DEBUG_MODE)
+  ];
   console.log("Validating...");
   for (const validator of validators) {
     const result = validator.visit(tree);
