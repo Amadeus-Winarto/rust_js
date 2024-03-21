@@ -2,8 +2,7 @@ import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor
 import { Validator } from './types';
 import { print } from './utils';
 import { ErrorNode } from 'antlr4ts/tree/ErrorNode';
-import { Function_bodyContext, Function_declarationContext } from '../grammars/Rust1Parser';
-import { visitFunctionBody } from 'typescript';
+import { Function_bodyContext, Function_declarationContext, Return_expressionContext } from '../grammars/Rust1Parser';
 
 /**
  * Implements the rule: all variables must be declared at most once before they are used.
@@ -31,7 +30,6 @@ export class SyntaxValidator extends AbstractParseTreeVisitor<boolean> implement
         // If function has a empty return type, it must not have a return statement
 
         const return_type_string = ctx.type().text;
-        console.log(return_type_string);
 
         const has_empty_return_type = return_type_string === "()";
         const body = ctx.function_body();
@@ -56,5 +54,11 @@ export class SyntaxValidator extends AbstractParseTreeVisitor<boolean> implement
         }
 
         return true;
+    }
+
+    visitReturn_expression(ctx: Return_expressionContext): boolean {
+        const line_number = ctx.start.line;
+        this.print_fn("Not expecting return statement at line " + line_number);
+        return false;
     }
 }
