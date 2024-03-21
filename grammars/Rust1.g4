@@ -15,7 +15,7 @@ constant_declaration:
 variable_declaration:
 	'let' var_name ':' type '=' expression ';';
 function_declaration:
-	'fn' function_name parameter_list '->' type block;
+	'fn' function_name parameter_list '->' type function_body;
 return_expression: 'return' expression;
 expression:
 	literal
@@ -36,6 +36,7 @@ function_application:
 	function_name '(' (expression (',' expression)*)? ')';
 
 block: '{' (statement)* '}';
+function_body: block;
 
 parameter_list: '()' | '(' parameters ')';
 parameter: IDENTIFIER ':' type;
