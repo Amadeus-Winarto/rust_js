@@ -1,4 +1,4 @@
-import { BlockContext, Cond_exprContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, If_expressionContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
+import { BlockContext, Cond_exprContext, Constant_declarationContext, ExpressionContext, Function_bodyContext, Function_declarationContext, If_expressionContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { Validator, Scope, Result, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_numeric_operator, is_bool_operator, is_comparison_operator } from './types';
 import { print, add_to_scope, get_type } from './utils';
@@ -96,6 +96,37 @@ class TypeProducer extends AbstractParseTreeVisitor<Result<TypeAnnotation>> impl
         add_to_scope(this.scope, name, type);
         this.scope.push(new Map());
         const result = this.visitChildren(ctx);
+
+        // Make sure all return statements have the same type as the function's return type
+        const maybe_body = ctx.function_body();
+        const return_statements = maybe_body !== undefined
+            ? maybe_body.block().statement()
+                .map(s => s.return_expression())
+                .filter(s => s !== undefined)
+            : [];
+
+        if (return_statements.length === 0 && return_type !== "()") {
+            return {
+                ok: false,
+                error: new Error(`Line ${ctx.start.line}: function '${name}' expects a return statement but none found. There's a bug in the TypeValidator!`)
+            };
+        }
+
+        const return_type_tag = value_to_type(return_type);
+        for (const return_statement of return_statements) {
+            const actual_return_type = this.visit(return_statement);
+            if (!actual_return_type.ok) {
+                return actual_return_type;
+            }
+
+            if (return_type_tag !== actual_return_type.value.type && !is_promotable(actual_return_type.value.type, return_type_tag)) {
+                return {
+                    ok: false,
+                    error: new Error(`Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got ${actual_return_type.value.type}`)
+                };
+            }
+        }
+
         this.scope.pop();
         return result;
     }
