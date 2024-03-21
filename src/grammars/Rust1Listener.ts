@@ -14,6 +14,7 @@ import { If_expressionContext } from "./Rust1Parser";
 import { Cond_exprContext } from "./Rust1Parser";
 import { Function_applicationContext } from "./Rust1Parser";
 import { BlockContext } from "./Rust1Parser";
+import { Function_bodyContext } from "./Rust1Parser";
 import { Parameter_listContext } from "./Rust1Parser";
 import { ParameterContext } from "./Rust1Parser";
 import { ParametersContext } from "./Rust1Parser";
@@ -160,6 +161,17 @@ export interface Rust1Listener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitBlock?: (ctx: BlockContext) => void;
+
+	/**
+	 * Enter a parse tree produced by `Rust1Parser.function_body`.
+	 * @param ctx the parse tree
+	 */
+	enterFunction_body?: (ctx: Function_bodyContext) => void;
+	/**
+	 * Exit a parse tree produced by `Rust1Parser.function_body`.
+	 * @param ctx the parse tree
+	 */
+	exitFunction_body?: (ctx: Function_bodyContext) => void;
 
 	/**
 	 * Enter a parse tree produced by `Rust1Parser.parameter_list`.
