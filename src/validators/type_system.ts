@@ -1,6 +1,6 @@
 import { BlockContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
-import { Validator, Scope, Result, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_numeric_operator, is_bool_operator } from './types';
+import { Validator, Scope, Result, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_numeric_operator, is_bool_operator, is_comparison_operator } from './types';
 import { print, add_to_scope, get_type } from './utils';
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 
@@ -203,7 +203,7 @@ class TypeProducer extends AbstractParseTreeVisitor<Result<TypeAnnotation>> impl
                         };
                     }
 
-                    const result_type = is_bool_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type);
+                    const result_type = is_comparison_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type);
                     return {
                         ok: true,
                         value: result_type
@@ -214,11 +214,11 @@ class TypeProducer extends AbstractParseTreeVisitor<Result<TypeAnnotation>> impl
                     return left_type === TypeTag.integer_literal
                         ? {
                             ok: true,
-                            value: is_bool_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(right_type)
+                            value: is_comparison_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(right_type)
                         }
                         : {
                             ok: true,
-                            value: is_bool_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type)
+                            value: is_comparison_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type)
                         };
                 }
             } else if (is_float(left_type) && is_float(right_type)) {
@@ -237,7 +237,7 @@ class TypeProducer extends AbstractParseTreeVisitor<Result<TypeAnnotation>> impl
                         };
                     }
 
-                    const result_type = is_bool_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type);
+                    const result_type = is_comparison_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type);
                     return {
                         ok: true,
                         value: result_type
@@ -246,11 +246,11 @@ class TypeProducer extends AbstractParseTreeVisitor<Result<TypeAnnotation>> impl
                     return left_type === TypeTag.float_literal
                         ? {
                             ok: true,
-                            value: is_bool_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(right_type)
+                            value: is_comparison_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(right_type)
                         }
                         : {
                             ok: true,
-                            value: is_bool_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type)
+                            value: is_comparison_operator(binop_ctx.text) ? new TypeAnnotation(TypeTag.bool) : new TypeAnnotation(left_type)
                         };
                 }
             }
