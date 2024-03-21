@@ -1,4 +1,4 @@
-import { BlockContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
+import { BlockContext, Cond_exprContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, If_expressionContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { Validator, Scope, Result, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_numeric_operator, is_bool_operator, is_comparison_operator } from './types';
 import { print, add_to_scope, get_type } from './utils';
@@ -394,6 +394,21 @@ class TypeProducer extends AbstractParseTreeVisitor<Result<TypeAnnotation>> impl
         };
     }
 
+    visitCond_expr(ctx: Cond_exprContext): Result<TypeAnnotation> {
+        const result = this.visitChildren(ctx);
+        if (!result.ok) {
+            return result;
+        }
+
+        if (!is_bool(result.value.type)) {
+            return {
+                ok: false,
+                error: new Error(`Line ${ctx.start.line}: condition expression must be of type bool but got ${result.value.type}`)
+            };
+        }
+
+        return result;
+    }
 }
 
 export class TypeSystemValidator extends AbstractParseTreeVisitor<boolean> implements Validator {
