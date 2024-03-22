@@ -10,7 +10,7 @@ import { SyntaxValidator } from './validators/syntax';
 import { DeclarationValidator } from './validators/declaration';
 import { TypeSystemValidator } from './validators/type_system';
 
-import { Compiler } from './compiler';
+import { Rust1Compiler } from './compilers/rust1_compiler';
 
 const DEBUG_MODE = false;
 
@@ -84,6 +84,16 @@ async function main() {
     }
   }
   console.log("Validation passed!");
+
+  // Compile the program
+  const compiler = new Rust1Compiler(DEBUG_MODE);
+  const result = compiler.visit(tree);
+  if (!result.ok) {
+    console.error("Compilation failed: ", result.error);
+    process.exit(1);
+  }
+  console.log("Compilation passed!");
+  console.log("Instructions: ", result.value);
   process.exit(0);
 }
 
