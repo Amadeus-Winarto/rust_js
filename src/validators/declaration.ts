@@ -3,7 +3,7 @@ import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor
 import { Validator, Scope, printScopes, TypeAnnotation, value_to_type } from './types';
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 import { print, add_to_scope, in_scope_untyped, Result } from '../utils';
-import { SemanticError } from './errors';
+import { SemanticError } from './utils/errors';
 
 
 class DeclarationRuleValidator extends AbstractParseTreeVisitor<Result<Boolean>> implements RustVisitor<Result<Boolean>> {

@@ -4,7 +4,7 @@ import { print, Result } from '../utils';
 import { ErrorNode } from 'antlr4ts/tree/ErrorNode';
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 import { Function_bodyContext, Function_declarationContext, ProgramContext, Return_expressionContext } from '../grammars/Rust1Parser';
-import { SyntaxError } from './errors';
+import { SyntaxError } from './utils/errors';
 
 class SyntaxRuleValidator extends AbstractParseTreeVisitor<Result<boolean>> implements RustVisitor<Result<boolean>> {
     rule_name: string = "Syntax";
