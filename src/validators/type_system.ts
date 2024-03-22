@@ -4,6 +4,7 @@ import {
   Constant_declarationContext,
   ExpressionContext,
   Function_declarationContext,
+  If_expressionContext,
   Parameter_listContext,
   ProgramContext,
   Variable_declarationContext,
@@ -75,9 +76,27 @@ class TypeProducer
   visitBlock(ctx: BlockContext): Result<TypeAnnotation> {
     this.print_fn("Checking block type");
     this.scope.push(new Map());
-    const result = this.visitChildren(ctx);
+
+    // Check all statements
+    const statements = ctx
+      .statement()
+      .map((statement) => this.visit(statement));
+    for (const statement of statements) {
+      if (!statement.ok) {
+        return statement;
+      }
+    }
+
+    // Check expression if it exists
+    const maybe_expr = ctx.expression();
+    const unit_type: Result<TypeAnnotation> = {
+      ok: true,
+      value: new TypeAnnotation(TypeTag.unit),
+    };
+    const block_type =
+      maybe_expr === undefined ? unit_type : this.visit(maybe_expr);
     this.scope.pop();
-    return result;
+    return block_type;
   }
 
   visitConstant_declaration(
@@ -504,9 +523,15 @@ class TypeProducer
     }
 
     // Case 7: (expression)
-    const paren_ctx = ctx.expression(0);
+    const paren_ctx = ctx.parens_expression();
     if (paren_ctx !== undefined) {
-      return this.visit(paren_ctx);
+      return this.visit(paren_ctx.expression());
+    }
+
+    // Case 8: if expression
+    const if_ctx = ctx.if_expression();
+    if (if_ctx !== undefined) {
+      return this.visit(if_ctx);
     }
 
     this.print_fn("\tUnknown expression type!");
@@ -532,6 +557,56 @@ class TypeProducer
     }
 
     return result;
+  }
+
+  visitIf_expression(ctx: If_expressionContext): Result<TypeAnnotation> {
+    // Go through all conditions
+    const condition_types = ctx
+      .cond_expr()
+      .map((cond_ctx) => this.visit(cond_ctx));
+
+    for (const condition of condition_types) {
+      if (!condition.ok) {
+        return condition;
+      }
+
+      if (!is_bool(condition.value.type)) {
+        return {
+          ok: false,
+          error: new Error(
+            `Line ${ctx.start.line}: condition expression must be of type bool but got ${condition.value.type}`,
+          ),
+        };
+      }
+    }
+
+    // Check all blocks
+    const maybe_block_types = ctx.block().map((block) => this.visit(block));
+    for (const block of maybe_block_types) {
+      if (!block.ok) {
+        return block;
+      }
+    }
+    const block_types = maybe_block_types
+      .map((b) => (b.ok ? b.value : undefined))
+      .filter((t) => t !== undefined);
+    const all_same_type = block_types.every((t) => t.equals(block_types[0]));
+    if (!all_same_type) {
+      return {
+        ok: false,
+        error: new Error(
+          `Line ${ctx.start.line}: if/else blocks must have the same type but got (${block_types.join(" and ")})`,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value:
+        block_types[0] === undefined
+          ? new TypeAnnotation(TypeTag.unknown)
+          : block_types[0],
+    };
   }
 }
 

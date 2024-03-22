@@ -23,19 +23,20 @@ expression:
 	| expression binary_logical_operator expression
 	| unary_operator expression
 	| function_application
-	| '(' expression ')'
+	| parens_expression
 	| if_expression;
 
+parens_expression: '(' expression ')';
 if_expression:
 	'if' cond_expr block (
-		'else' ('if' cond_expr block)* 'else' block
+		('else' 'if' cond_expr block)* 'else' block
 	)?;
 cond_expr: expression;
 
 function_application:
 	function_name '(' (expression (',' expression)*)? ')';
 
-block: '{' (statement)* '}';
+block: '{' (statement)* (expression)? '}';
 function_body: block;
 
 parameter_list: '()' | '(' parameters ')';

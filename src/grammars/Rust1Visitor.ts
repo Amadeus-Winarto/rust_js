@@ -9,6 +9,7 @@ import { Variable_declarationContext } from "./Rust1Parser";
 import { Function_declarationContext } from "./Rust1Parser";
 import { Return_expressionContext } from "./Rust1Parser";
 import { ExpressionContext } from "./Rust1Parser";
+import { Parens_expressionContext } from "./Rust1Parser";
 import { If_expressionContext } from "./Rust1Parser";
 import { Cond_exprContext } from "./Rust1Parser";
 import { Function_applicationContext } from "./Rust1Parser";
@@ -90,6 +91,13 @@ export interface Rust1Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitExpression?: (ctx: ExpressionContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust1Parser.parens_expression`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitParens_expression?: (ctx: Parens_expressionContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust1Parser.if_expression`.
