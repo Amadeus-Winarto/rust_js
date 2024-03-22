@@ -1,5 +1,7 @@
 {
-  "lib": ["ES2021"],
+  "lib": [
+    "ES2021"
+  ],
   "compilerOptions": {
     "noImplicitAny": true,
     "removeComments": true,
