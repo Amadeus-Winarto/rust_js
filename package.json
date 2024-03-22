@@ -5,7 +5,8 @@
   "main": "src/main.ts",
   "scripts": {
     "gen_parser": "antlr4ts -visitor grammars/Rust1.g4 -o src/",
-    "main": "tsx src/main.ts"
+    "main": "tsx src/main.ts",
+    "prettier": "npx prettier --write src/**/*.ts"
   },
   "author": "",
   "license": "ISC",
@@ -13,12 +14,14 @@
     "@types/node": "^20.11.28",
     "antlr4": "^4.13.1-patch-1",
     "antlr4ts": "^0.5.0-alpha.4",
+    "prettier": "^3.2.5",
     "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "antlr4ts-cli": "^0.5.0-alpha.4",
     "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-config-standard-with-typescript": "^43.0.1",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^16.6.2",
