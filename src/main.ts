@@ -1,17 +1,17 @@
-import { createInterface } from 'readline';
-import { existsSync, readFileSync } from 'fs';
+import { createInterface } from "readline";
+import { existsSync, readFileSync } from "fs";
 
-import { CharStreams, CommonTokenStream } from 'antlr4ts';
-import { Rust1Lexer as RustLexer } from './grammars/Rust1Lexer';
-import { Rust1Parser as RustParser } from './grammars/Rust1Parser';
-import { Validator } from './validators/types';
+import { CharStreams, CommonTokenStream } from "antlr4ts";
+import { Rust1Lexer as RustLexer } from "./grammars/Rust1Lexer";
+import { Rust1Parser as RustParser } from "./grammars/Rust1Parser";
+import { Validator } from "./validators/types";
 
-import { SyntaxValidator } from './validators/syntax';
-import { EntrypointValidator } from './validators/entrypoint';
-import { DeclarationValidator } from './validators/declaration';
-import { TypeSystemValidator } from './validators/type_system';
+import { SyntaxValidator } from "./validators/syntax";
+import { EntrypointValidator } from "./validators/entrypoint";
+import { DeclarationValidator } from "./validators/declaration";
+import { TypeSystemValidator } from "./validators/type_system";
 
-import { Rust1Compiler } from './compilers/rust1_compiler';
+import { Rust1Compiler } from "./compilers/rust1_compiler";
 
 const DEBUG_MODE = false;
 
@@ -27,7 +27,7 @@ async function blocking_input() {
   });
 
   while (input_string === undefined) {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return input_string;
 }
@@ -43,20 +43,17 @@ function is_file(filename: string): boolean {
   return filename.endsWith(".rs");
 }
 
-
 // Main function
 async function main() {
   const input_string = await blocking_input();
-  const program_string = function () {
+  const program_string = (function () {
     if (!is_file(input_string)) {
       console.log("Interpreting input as program string!");
       return input_string;
+    } else {
+      return readFileSync(input_string, "utf8");
     }
-    else {
-      return readFileSync(input_string, 'utf8');
-
-    }
-  }();
+  })();
 
   console.log("Program:\n ", program_string);
 
@@ -74,7 +71,7 @@ async function main() {
     new SyntaxValidator(DEBUG_MODE),
     new EntrypointValidator(DEBUG_MODE),
     new DeclarationValidator(DEBUG_MODE),
-    new TypeSystemValidator(DEBUG_MODE)
+    new TypeSystemValidator(DEBUG_MODE),
   ];
   console.log("Validating...");
   for (const validator of validators) {
@@ -99,4 +96,4 @@ async function main() {
   process.exit(0);
 }
 
-main(); 
+main();
