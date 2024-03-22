@@ -1,6 +1,6 @@
-import { BlockContext, Cond_exprContext, Constant_declarationContext, ExpressionContext, Function_bodyContext, Function_declarationContext, If_expressionContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
+import { BlockContext, Cond_exprContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, Parameter_listContext, ProgramContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
-import { Validator, Scope, Result, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_numeric_operator, is_bool_operator, is_comparison_operator } from './types';
+import { Validator, Scope, Result, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_comparison_operator } from './types';
 import { print, add_to_scope, get_type } from './utils';
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 
