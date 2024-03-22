@@ -2,10 +2,10 @@
   "name": "rust.js",
   "version": "1.0.0",
   "description": "A Virtual Machine for Rust",
-  "main": "src/test.ts",
+  "main": "src/main.ts",
   "scripts": {
     "gen_parser": "antlr4ts -visitor grammars/Rust1.g4 -o src/",
-    "main": "tsx src/test.ts"
+    "main": "tsx src/main.ts"
   },
   "author": "",
   "license": "ISC",
