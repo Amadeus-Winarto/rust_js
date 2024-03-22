@@ -17,7 +17,7 @@ We define our levels of support for Rust grammar features in accordance to how S
     - Imports / includes
     - Character literals; hard to distinguish from string literals
     - Excluding reserved words in certain contexts e.g. variable declarations
-
+  - For more details, refer to ![Rust1 Features](Rust1_Features.md)
 
 ### Verifying the grammar
 
@@ -34,7 +34,7 @@ antlr4-parse grammars/Rust1.g4 program < samples/rust1/if_expr.rs
 ```
 
 Some useful flags for `antlr4-parse` are:
+
 - `-tree`: Print the parse tree
 - `-gui`: Show the parse tree in a graphical user interface
 - `-tokens`: Print the tokens
-
