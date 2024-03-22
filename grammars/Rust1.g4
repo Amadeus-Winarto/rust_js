@@ -5,9 +5,7 @@ statement:
 	constant_declaration
 	| variable_declaration
 	| function_declaration
-	| if_expression
-	| return_expression ';'
-	| block
+	| return_expression ';' // We treat return_expression separately 
 	| expression ';';
 
 constant_declaration:
@@ -20,11 +18,13 @@ return_expression: 'return' expression;
 expression:
 	literal
 	| name
+	| block
 	| expression binary_operator expression
 	| expression binary_logical_operator expression
 	| unary_operator expression
 	| function_application
-	| '(' expression ')';
+	| '(' expression ')'
+	| if_expression;
 
 if_expression:
 	'if' cond_expr block (
