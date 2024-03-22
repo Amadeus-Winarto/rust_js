@@ -4,17 +4,7 @@ import { print, Result } from '../utils';
 import { ErrorNode } from 'antlr4ts/tree/ErrorNode';
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 import { Function_bodyContext, Function_declarationContext, ProgramContext, Return_expressionContext } from '../grammars/Rust1Parser';
-
-class SyntaxError extends Error {
-    constructor(line_number: number, message: string) {
-        super("Line " + line_number + ": " + message);
-        this.name = "SyntaxError";
-    }
-}
-
-/**
- * Implements the rule: all variables must be declared at most once before they are used.
- */
+import { SyntaxError } from './errors';
 
 class SyntaxRuleValidator extends AbstractParseTreeVisitor<Result<boolean>> implements RustVisitor<Result<boolean>> {
     rule_name: string = "Syntax";

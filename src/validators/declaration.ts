@@ -1,10 +1,12 @@
 import { BlockContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { Validator, Scope, printScopes, TypeAnnotation, value_to_type } from './types';
-import { print, add_to_scope, in_scope_untyped } from '../utils';
+import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
+import { print, add_to_scope, in_scope_untyped, Result } from '../utils';
+import { SemanticError } from './errors';
 
-export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> implements Validator {
-    rule_name: string = "NoDoubleDeclare + DeclareBeforeUse";
+
+class DeclarationRuleValidator extends AbstractParseTreeVisitor<Result<Boolean>> implements RustVisitor<Result<Boolean>> {
     private scope: Scope[] = [];
     private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
@@ -13,21 +15,32 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
         this.print_fn = print(debug_mode);
     }
 
-    defaultResult() {
-        return true;
+    defaultResult(): Result<Boolean> {
+        return {
+            ok: true,
+            value: true
+        };
     }
 
-    aggregateResult(aggregate: boolean, nextResult: boolean) {
+    aggregateResult(aggregate: Result<Boolean>, nextResult: Result<Boolean>) {
+        if (!aggregate.ok) {
+            return aggregate;
+        }
+
+        if (!nextResult.ok) {
+            return nextResult;
+        }
+
         return aggregate && nextResult;
     }
 
-    visitProgram(ctx: ProgramContext): boolean {
+    visitProgram(ctx: ProgramContext): Result<Boolean> {
         this.print_fn("Visiting program -> Initialising scope");
         this.scope = [new Map()];
         return this.visitChildren(ctx);
     }
 
-    visitBlock(ctx: BlockContext): boolean {
+    visitBlock(ctx: BlockContext): Result<Boolean> {
         this.print_fn("Visiting block -> Creating new scope");
         this.scope.push(new Map());
         const result = this.visitChildren(ctx);
@@ -35,14 +48,17 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
         return result;
     }
 
-    visitConstant_declaration(ctx: Constant_declarationContext): boolean {
+    visitConstant_declaration(ctx: Constant_declarationContext): Result<Boolean> {
         this.print_fn("Visiting constant_declaration");
         const name = ctx.const_name().text;
         const type = new TypeAnnotation(value_to_type(ctx.type().text));
 
         if (in_scope_untyped(this.scope, name)) {
             this.print_fn("Error: constant name '", name, "' already declared in this scope");
-            return false;
+            return {
+                ok: false,
+                error: new SemanticError(ctx.start.line, "Constant name '" + name + "' already declared in this scope")
+            };
         }
 
         add_to_scope(this.scope, name, type);
@@ -50,14 +66,17 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
         return this.visitChildren(ctx);
     }
 
-    visitVariable_declaration(ctx: Variable_declarationContext): boolean {
+    visitVariable_declaration(ctx: Variable_declarationContext): Result<Boolean> {
         this.print_fn("Visiting variable_declaration");
         const name = ctx.var_name().text;
         const type = new TypeAnnotation(value_to_type(ctx.type().text));
 
         if (in_scope_untyped(this.scope, name)) {
             this.print_fn("Error: variable name '", name, "' already declared in this scope");
-            return false;
+            return {
+                ok: false,
+                error: new SemanticError(ctx.start.line, "Variable name '" + name + "' already declared in this scope")
+            };
         }
         add_to_scope(this.scope, name, type);
         printScopes(this.debug_mode, "Current scope", this.scope);
@@ -65,7 +84,7 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
         return this.visitChildren(ctx);
     }
 
-    visitFunction_declaration(ctx: Function_declarationContext): boolean {
+    visitFunction_declaration(ctx: Function_declarationContext): Result<Boolean> {
         this.print_fn("Visiting function_declaration");
         const name = ctx.function_name().text;
         const type = new TypeAnnotation(value_to_type("function"));
@@ -73,7 +92,10 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
         // Register function name in current scope
         if (in_scope_untyped(this.scope, name)) {
             this.print_fn("Error: function name '", name, "' already declared in this scope");
-            return false;
+            return {
+                ok: false,
+                error: new SemanticError(ctx.start.line, "Function name '" + name + "' already declared in this scope")
+            };
         }
         add_to_scope(this.scope, name, type);
         printScopes(this.debug_mode, "Current scope", this.scope);
@@ -85,7 +107,7 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
         return result;
     }
 
-    visitParameter_list(ctx: Parameter_listContext): boolean {
+    visitParameter_list(ctx: Parameter_listContext): Result<Boolean> {
         this.print_fn("Visiting parameter_list");
 
         // Register parameters in current scope
@@ -98,7 +120,10 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
 
                 if (in_scope_untyped(this.scope, name)) {
                     this.print_fn("Error: parameter name '", name, "' already declared in this scope");
-                    return false;
+                    return {
+                        ok: false,
+                        error: new SemanticError(ctx.start.line, "Parameter name '" + name + "' already declared in this scope")
+                    };
                 }
                 add_to_scope(this.scope, name, type);
             }
@@ -109,13 +134,16 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
         return result;
     }
 
-    visitExpression(ctx: ExpressionContext): boolean {
+    visitExpression(ctx: ExpressionContext): Result<Boolean> {
         this.print_fn("Visiting expression");
 
         // Case 1: Literal
         const literal_ctx = ctx.literal();
         if (literal_ctx !== undefined) {
-            return true;
+            return {
+                ok: true,
+                value: true
+            };
         }
 
         // Case 2: Name
@@ -124,13 +152,52 @@ export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> impl
             const name = name_ctx.text;
             if (!in_scope_untyped(this.scope, name)) {
                 this.print_fn("Error: name '", name, "' not declared in this scope");
-                return false;
+                return {
+                    ok: false,
+                    error: new SemanticError(ctx.start.line, "Name '" + name + "' not declared in this scope")
+                };
             }
 
-            return true;
+            return {
+                ok: true,
+                value: true
+            }
         }
 
         // Case 3: All other cases
         return this.visitChildren(ctx);
+    }
+}
+
+export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> implements Validator {
+    rule_name: string = "NoDoubleDeclare + DeclareBeforeUse";
+    private print_fn: (message?: any, ...optionalParams: any[]) => void;
+    private rule_validator: DeclarationRuleValidator;
+
+    constructor(debug_mode: boolean) {
+        super();
+        this.print_fn = print(debug_mode);
+        this.rule_validator = new DeclarationRuleValidator(debug_mode);
+    }
+
+    defaultResult(): boolean {
+        return true;
+    }
+
+    aggregateResult(aggregate: boolean, nextResult: boolean): boolean {
+        return aggregate && nextResult;
+    }
+
+    visitProgram(ctx: ProgramContext): boolean {
+        this.print_fn("Visiting program");
+        const has_legal_syntax = this.rule_validator.visit(ctx);
+
+        if (has_legal_syntax.ok) {
+            this.print_fn("Declarations are legal");
+            return true;
+        } else {
+            console.error(has_legal_syntax.error);
+            return false;
+        }
     }
 }
