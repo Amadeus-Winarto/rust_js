@@ -3,6 +3,7 @@
 import { ParseTreeListener } from "antlr4ts/tree/ParseTreeListener";
 
 import { ProgramContext } from "./Rust1Parser";
+import { Program_elementContext } from "./Rust1Parser";
 import { StatementContext } from "./Rust1Parser";
 import { Constant_declarationContext } from "./Rust1Parser";
 import { Variable_declarationContext } from "./Rust1Parser";
@@ -50,6 +51,17 @@ export interface Rust1Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitProgram?: (ctx: ProgramContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust1Parser.program_element`.
+   * @param ctx the parse tree
+   */
+  enterProgram_element?: (ctx: Program_elementContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust1Parser.program_element`.
+   * @param ctx the parse tree
+   */
+  exitProgram_element?: (ctx: Program_elementContext) => void;
 
   /**
    * Enter a parse tree produced by `Rust1Parser.statement`.

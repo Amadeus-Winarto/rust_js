@@ -27,7 +27,7 @@ export class EntrypointValidator
     this.print_fn("Visiting program");
 
     const function_declarations = ctx
-      .statement()
+      .program_element()
       .map((statement) => statement.function_declaration())
       .filter((function_declaration) => function_declaration !== undefined)
       .filter((function_ctx) => function_ctx.function_name().text === "main");

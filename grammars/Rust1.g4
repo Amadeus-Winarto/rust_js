@@ -1,6 +1,7 @@
 grammar Rust1;
 
-program: statement (statement)* EOF;
+program: program_element (program_element)* EOF;
+program_element: (constant_declaration | function_declaration);
 statement:
 	constant_declaration
 	| variable_declaration

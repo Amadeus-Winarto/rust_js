@@ -3,6 +3,7 @@
 import { ParseTreeVisitor } from "antlr4ts/tree/ParseTreeVisitor";
 
 import { ProgramContext } from "./Rust1Parser";
+import { Program_elementContext } from "./Rust1Parser";
 import { StatementContext } from "./Rust1Parser";
 import { Constant_declarationContext } from "./Rust1Parser";
 import { Variable_declarationContext } from "./Rust1Parser";
@@ -49,6 +50,13 @@ export interface Rust1Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitProgram?: (ctx: ProgramContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust1Parser.program_element`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitProgram_element?: (ctx: Program_elementContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust1Parser.statement`.
