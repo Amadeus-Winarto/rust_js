@@ -1,7 +1,7 @@
 import { BlockContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, Parameter_listContext, ProgramContext, StatementContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { Validator, Scope, printScopes, TypeAnnotation, value_to_type } from './types';
-import { print, add_to_scope, in_scope_untyped } from './utils';
+import { print, add_to_scope, in_scope_untyped } from '../utils';
 
 export class DeclarationValidator extends AbstractParseTreeVisitor<boolean> implements Validator {
     rule_name: string = "NoDoubleDeclare + DeclareBeforeUse";

@@ -1,10 +1,5 @@
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 
-export type Result<T, E = Error> =
-    | { ok: true; value: T }
-    | { ok: false; error: E };
-
-
 // Type: represents the type of program elements
 export enum TypeTag {
     i32 = "i32",

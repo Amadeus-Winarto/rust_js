@@ -1,7 +1,7 @@
 import { BlockContext, Cond_exprContext, Constant_declarationContext, ExpressionContext, Function_declarationContext, Parameter_listContext, ProgramContext, Variable_declarationContext } from '../grammars/Rust1Parser';
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
-import { Validator, Scope, Result, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_comparison_operator } from './types';
-import { print, add_to_scope, get_type } from './utils';
+import { Validator, Scope, TypeAnnotation, TypeTag, value_to_type, is_integer, is_float, is_bool, is_promotable, is_comparison_operator } from './types';
+import { print, add_to_scope, get_type, Result } from '../utils';
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 
 class TypeProducer extends AbstractParseTreeVisitor<Result<TypeAnnotation>> implements RustVisitor<Result<TypeAnnotation>> {

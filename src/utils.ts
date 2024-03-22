@@ -1,4 +1,4 @@
-import { Scope, TypeAnnotation } from "./types";
+import { Scope, TypeAnnotation } from "./validators/types";
 
 export const print = (is_debug: boolean) => {
     if (is_debug) {
@@ -29,3 +29,7 @@ export function get_type(scope: Scope[], name: string): TypeAnnotation | undefin
 export function add_to_scope(scope: Scope[], name: string, type: TypeAnnotation): void {
     scope[scope.length - 1].set(name, type);
 }
+
+export type Result<T, E = Error> =
+    | { ok: true; value: T }
+    | { ok: false; error: E };

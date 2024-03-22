@@ -1,6 +1,6 @@
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
-import { Validator, Result } from './types';
-import { print } from './utils';
+import { Validator } from './types';
+import { print, Result } from '../utils';
 import { ErrorNode } from 'antlr4ts/tree/ErrorNode';
 import { Rust1Visitor as RustVisitor } from '../grammars/Rust1Visitor';
 import { Function_bodyContext, Function_declarationContext, ProgramContext, Return_expressionContext } from '../grammars/Rust1Parser';
