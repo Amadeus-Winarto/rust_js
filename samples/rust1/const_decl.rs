@@ -1,1 +1,3 @@
-const x: i32 = 5; 
+fn main() -> () {
+    const x: i32 = 5;
+} 

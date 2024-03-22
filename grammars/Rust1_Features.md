@@ -1,4 +1,4 @@
-# Rust1 Specifications
+# Rust1 Features
 
 ## Literal values
 
@@ -124,3 +124,7 @@ square(5);
 ```
 
 The statements in such a sequence are evaluated in the given order. The result of evaluating the sequence is the result of evaluating the last statement in the sequence, in this case square(5);. Read more about sequences in section 1.1.2 Naming and the Environment of the textbook.
+
+## Other Requirements / Features
+
+- Entry point: The entry point of a Rust1 program is a function called `main`. This function takes no arguments and returns nothing. The body of the function is a block.

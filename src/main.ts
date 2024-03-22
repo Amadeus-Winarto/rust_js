@@ -7,6 +7,7 @@ import { Rust1Parser as RustParser } from './grammars/Rust1Parser';
 import { Validator } from './validators/types';
 
 import { SyntaxValidator } from './validators/syntax';
+import { EntrypointValidator } from './validators/entrypoint';
 import { DeclarationValidator } from './validators/declaration';
 import { TypeSystemValidator } from './validators/type_system';
 
@@ -71,6 +72,7 @@ async function main() {
   // Build the list of validators
   const validators: Validator[] = [
     new SyntaxValidator(DEBUG_MODE),
+    new EntrypointValidator(DEBUG_MODE),
     new DeclarationValidator(DEBUG_MODE),
     new TypeSystemValidator(DEBUG_MODE)
   ];
