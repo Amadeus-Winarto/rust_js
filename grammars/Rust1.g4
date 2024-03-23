@@ -5,7 +5,6 @@ program_element: (constant_declaration | function_declaration);
 statement:
 	constant_declaration
 	| variable_declaration
-	| function_declaration
 	| return_expression ';' // We treat return_expression separately 
 	| expression ';';
 
