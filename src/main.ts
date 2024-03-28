@@ -63,6 +63,15 @@ async function main() {
   const tokenStream = new CommonTokenStream(lexer);
   const parser = new RustParser(tokenStream);
 
+  // Attach the error handler
+  parser.removeErrorListeners();
+  parser.addErrorListener({
+    syntaxError: function (recognizer, offendingSymbol, line, column, msg, e) {
+      console.error(`Syntax error at line ${line} column ${column} -> ${msg}`);
+      process.exit(1);
+    },
+  });
+
   // Parse the input (this is the entry point for the grammar)
   const tree = parser.program();
 
