@@ -28,9 +28,7 @@ expression:
 
 parens_expression: '(' expression ')';
 if_expression:
-	'if' cond_expr block (
-		('else' 'if' cond_expr block)* 'else' block
-	)?;
+	'if' cond_expr block ('else' (block | if_expression))?;
 cond_expr: expression;
 
 function_application:
