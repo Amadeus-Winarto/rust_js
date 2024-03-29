@@ -126,7 +126,6 @@ class Rust1InstructionCompiler
 
   constructor(
     private static_context: CompileTimeContext,
-    private function_env: Environment,
     debug_mode: boolean = false,
   ) {
     super();
@@ -550,22 +549,70 @@ class Rust1InstructionCompiler
   visitIf_expression(ctx: If_expressionContext): InstructionCompilerOutput {
     this.print_fn("Visiting if_expression");
 
+    const instructions = [];
+    const cond_instrs = this.visit(ctx.cond_expr());
+    if (!cond_instrs.ok) {
+      return cond_instrs;
+    }
+
+    const consequent_instrs = this.visit(ctx.block(0));
+    if (!consequent_instrs.ok) {
+      return consequent_instrs;
+    }
+
+    const alternative_instrs: InstructionCompilerOutput =
+      ctx.block(1) !== undefined
+        ? this.visit(ctx.block(1))
+        : {
+            ok: true,
+            value: {
+              max_stack_size: 0,
+              instructions: [
+                {
+                  opcode: OpCodes.NOP,
+                  operands: [],
+                },
+              ],
+            },
+          };
+
+    if (!alternative_instrs.ok) {
+      return alternative_instrs;
+    }
+
+    const max_stack_size = Math.max(
+      cond_instrs.value.max_stack_size,
+      consequent_instrs.value.max_stack_size,
+      alternative_instrs.value.max_stack_size,
+    );
+
+    const BRF_instr = {
+      opcode: OpCodes.BRF,
+      operands: [2 + consequent_instrs.value.instructions.length],
+    };
+    const BR_instr = {
+      opcode: OpCodes.BR,
+      operands: [1 + alternative_instrs.value.instructions.length],
+    };
+
+    instructions.push(...cond_instrs.value.instructions);
+    instructions.push(BRF_instr);
+    instructions.push(...consequent_instrs.value.instructions);
+    instructions.push(BR_instr);
+    instructions.push(...alternative_instrs.value.instructions);
+
     return {
-      ok: false,
-      error: new CompilerError(
-        ctx.start.line,
-        "Not implemented: If_expression",
-      ),
+      ok: true,
+      value: {
+        max_stack_size,
+        instructions,
+      },
     };
   }
 
   visitCond_expr(ctx: Cond_exprContext): InstructionCompilerOutput {
     this.print_fn("Visiting cond_expr");
-
-    return {
-      ok: false,
-      error: new CompilerError(ctx.start.line, "Not implemented: Cond_expr"),
-    };
+    return this.visit(ctx.expression());
   }
 
   visitFunction_application(
@@ -692,8 +739,8 @@ class Rust1InstructionCompiler
 
       instructions.push(...maybe_compiled_expression.value.instructions);
     } else {
-      // When block has no expression, the block cannot be used as a value expression (rvalue)
-      // Hence, it is fine to not push any value to the stack i.e. do nothing here
+      // Value of a block with no expression is `undefined`
+      instructions.push({ opcode: OpCodes.LGCU, operands: [] });
     }
 
     // Pop the environment
@@ -713,7 +760,14 @@ class Rust1InstructionCompiler
 
   visitFunction_body(ctx: Function_bodyContext): InstructionCompilerOutput {
     this.print_fn("Visiting function_body");
-    return this.visitBlock(ctx.block());
+    const results = this.visitBlock(ctx.block());
+    if (!results.ok) {
+      return results;
+    }
+
+    // Block is a value expression. An implicit return is added
+    results.value.instructions.push({ opcode: OpCodes.RETG, operands: [] });
+    return results;
   }
 
   visitStatement(ctx: StatementContext): InstructionCompilerOutput {
@@ -775,7 +829,6 @@ export class Rust1Compiler
     super();
     this.instruction_compiler = new Rust1InstructionCompiler(
       this.constant_env,
-      this.function_env,
       debug_mode,
     );
     this.compile_time_evaluator = new Rust1CompileTimeEvaluator();
