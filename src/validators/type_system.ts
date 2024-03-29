@@ -648,7 +648,8 @@ class TypeProducer
         .map((t) => value_to_type(t.trim()));
       const return_type = value_to_type(return_type_string);
 
-      const args = function_ctx.expression();
+      const maybe_args = function_ctx.args_list().args()?.expression();
+      const args = maybe_args === undefined ? [] : maybe_args;
       const annotated_arg_types = args.map((arg) => this.visit(arg));
       const maybe_error = annotated_arg_types.find((arg) => !arg.ok);
       if (maybe_error !== undefined) {
