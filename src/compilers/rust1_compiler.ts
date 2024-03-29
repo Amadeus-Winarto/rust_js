@@ -527,13 +527,12 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
   ): InstructionCompilerOutput {
     this.print_fn("Visiting return_expression");
 
-    return {
-      ok: false,
-      error: new CompilerError(
-        ctx.start.line,
-        "Not implemented: Return_expression",
-      ),
-    };
+    const results = this.visitExpression(ctx.expression());
+    if (!results.ok) {
+      return results;
+    }
+    results.value.instructions.push({ opcode: OpCodes.RETG, operands: [] });
+    return results;
   }
 
   visitIf_expression(ctx: If_expressionContext): CompilerOutput {
@@ -681,10 +680,8 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
 
       instructions.push(...maybe_compiled_expression.value.instructions);
     } else {
-      instructions.push({
-        opcode: OpCodes.LGCU,
-        operands: [],
-      });
+      // When block has no expression, the block cannot be used as a value expression (rvalue)
+      // Hence, it is fine to not push any value to the stack i.e. do nothing here
     }
 
     // Pop the environment
@@ -693,7 +690,6 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
       this.environments.pop();
     }
 
-    // Return the compiled instructions
     return {
       ok: true,
       value: {
@@ -760,14 +756,8 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     // Case 3: Return expression
     const maybe_return_expression = ctx.return_expression();
     if (maybe_return_expression !== undefined) {
-      const results = this.visitExpression(
-        maybe_return_expression.expression(),
-      );
-      if (!results.ok) {
-        return results;
-      }
-      results.value.instructions.push({ opcode: OpCodes.RETG, operands: [] });
-      return results;
+      // No need to add a POP instruction for return statements
+      return this.visitReturn_expression(maybe_return_expression);
     }
 
     // Case 4: Expression
