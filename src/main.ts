@@ -100,7 +100,7 @@ async function main() {
   console.log("Compiling...");
   const result = compiler.visit(tree);
   if (!result.ok) {
-    console.error("Compilation failed: ", result.error);
+    console.error(result.error);
     process.exit(1);
   }
   console.log("Compilation passed!");

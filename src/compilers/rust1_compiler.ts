@@ -19,7 +19,6 @@ import {
   Integer_literalContext,
   String_literalContext,
   Variable_declarationContext,
-  Binary_logical_operatorContext,
   ExpressionContext,
   Function_declarationContext,
   BlockContext,
@@ -27,14 +26,15 @@ import {
   Function_applicationContext,
   Function_bodyContext,
   If_expressionContext,
-  Parameter_listContext,
-  ParameterContext,
-  ParametersContext,
   Return_expressionContext,
   StatementContext,
+  LiteralContext,
+  NameContext,
+  Binary_operatorContext,
 } from "../grammars/Rust1Parser";
 import { Rust1CompileTimeEvaluator } from "./rust1_compile_time_evaluator";
 import OpCodes from "./opcodes";
+import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
 
 const VALID_UNARY_OPERATORS = new Map([
   ["!", OpCodes.NOTG],
@@ -82,7 +82,42 @@ function add_pop_result_instr(
   };
 }
 
-class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompilerOutput> {
+function compile_binary_expression(
+  binary_operator_ctx: Binary_operatorContext,
+  left_instrs: InstructionCompilerOutput,
+  right_instrs: InstructionCompilerOutput,
+): InstructionCompilerOutput {
+  if (!left_instrs.ok) {
+    return left_instrs;
+  }
+
+  if (!right_instrs.ok) {
+    return right_instrs;
+  }
+
+  const opcode = VALID_BINARY_OPERATORS.get(binary_operator_ctx.text)!;
+  const instructions = left_instrs.value.instructions.concat(
+    right_instrs.value.instructions,
+    [{ opcode, operands: [] }],
+  );
+  return {
+    ok: true,
+    value: {
+      max_stack_size:
+        1 +
+        Math.max(
+          left_instrs.value.max_stack_size,
+          right_instrs.value.max_stack_size,
+        ),
+      instructions,
+    },
+  };
+}
+
+class Rust1InstructionCompiler
+  extends AbstractParseTreeVisitor<InstructionCompilerOutput>
+  implements RustVisitor<InstructionCompilerOutput>
+{
   language_version: string = "Rust1";
 
   private environments: Environment[] = [];
@@ -298,104 +333,109 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     };
   }
 
+  visitLiteral(ctx: LiteralContext): InstructionCompilerOutput {
+    const maybe_boolean_literal = ctx.boolean_literal();
+    if (maybe_boolean_literal !== undefined) {
+      return this.visitBoolean_literal(maybe_boolean_literal);
+    }
+
+    const maybe_integer_literal = ctx.integer_literal();
+    if (maybe_integer_literal !== undefined) {
+      return this.visitInteger_literal(maybe_integer_literal);
+    }
+
+    const maybe_float_literal = ctx.float_literal();
+    if (maybe_float_literal !== undefined) {
+      return this.visitFloat_literal(maybe_float_literal);
+    }
+
+    const maybe_string_literal = ctx.string_literal();
+    if (maybe_string_literal !== undefined) {
+      return this.visitString_literal(maybe_string_literal);
+    }
+
+    return {
+      ok: false,
+      error: new CompilerError(
+        ctx.start.line,
+        "Unknown literal. This should not happen.",
+      ),
+    };
+  }
+
+  visitName(ctx: NameContext): InstructionCompilerOutput {
+    const name = ctx.text;
+    const maybe_lookup_success = name_recursive_lookup(this.environments, name);
+    if (maybe_lookup_success === undefined) {
+      // Name not in environment => Shadowing doesn't happen => Name must originate
+      // from compile-time context
+      const maybe_index = this.static_context.lookup(name);
+      if (maybe_index === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            `Variable ${name} not found in environment or compile-time context. This is a Validator Error.`,
+          ),
+        };
+      }
+
+      const type = this.static_context.get_type(maybe_index);
+      const value = this.static_context.get_value(maybe_index);
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: 1,
+          instructions: [
+            {
+              opcode: PrimitiveTypeToOpcode.get(type)!,
+              operands: [value],
+            },
+          ],
+        },
+      };
+    }
+
+    const current_env_index = this.environments.length - 1;
+    const [env_index, index] = maybe_lookup_success;
+    if (index === -1) {
+      return {
+        ok: false,
+        error: new CompilerError(ctx.start.line, "Unknown variable"),
+      };
+    }
+
+    const parent_index = current_env_index - env_index;
+    return {
+      ok: true,
+      value: {
+        max_stack_size: 1,
+        instructions: [
+          parent_index === 0
+            ? { opcode: OpCodes.LDLG, operands: [index] }
+            : {
+                opcode: OpCodes.LDPG,
+                operands: [index, parent_index],
+              },
+        ],
+      },
+    };
+  }
+
   visitExpression(ctx: ExpressionContext): InstructionCompilerOutput {
     this.print_fn("Visiting expression");
 
     // Case 1: literal
     const literal_ctx = ctx.literal();
     if (literal_ctx !== undefined) {
-      const maybe_boolean_literal = literal_ctx.boolean_literal();
-      if (maybe_boolean_literal !== undefined) {
-        return this.visitBoolean_literal(maybe_boolean_literal);
-      }
-
-      const maybe_integer_literal = literal_ctx.integer_literal();
-      if (maybe_integer_literal !== undefined) {
-        return this.visitInteger_literal(maybe_integer_literal);
-      }
-
-      const maybe_float_literal = literal_ctx.float_literal();
-      if (maybe_float_literal !== undefined) {
-        return this.visitFloat_literal(maybe_float_literal);
-      }
-
-      const maybe_string_literal = literal_ctx.string_literal();
-      if (maybe_string_literal !== undefined) {
-        return this.visitString_literal(maybe_string_literal);
-      }
-
-      return {
-        ok: false,
-        error: new CompilerError(
-          ctx.start.line,
-          "Unknown literal. This should not happen.",
-        ),
-      };
+      return this.visitLiteral(literal_ctx);
     }
 
     // Case 2: Name
     const name_ctx = ctx.name();
     if (name_ctx !== undefined) {
-      const name = name_ctx.text;
-      const maybe_lookup_success = name_recursive_lookup(
-        this.environments,
-        name,
-      );
-      if (maybe_lookup_success === undefined) {
-        // Name not in environment => Shadowing doesn't happen => Name must originate
-        // from compile-time context
-        const maybe_index = this.static_context.lookup(name);
-        if (maybe_index === undefined) {
-          return {
-            ok: false,
-            error: new CompilerError(
-              ctx.start.line,
-              `Variable ${name} not found in environment or compile-time context. This is a Validator Error.`,
-            ),
-          };
-        }
-
-        const type = this.static_context.get_type(maybe_index);
-        const value = this.static_context.get_value(maybe_index);
-
-        return {
-          ok: true,
-          value: {
-            max_stack_size: 1,
-            instructions: [
-              {
-                opcode: PrimitiveTypeToOpcode.get(type)!,
-                operands: [value],
-              },
-            ],
-          },
-        };
-      }
-
-      const current_env_index = this.environments.length - 1;
-      const [env_index, index] = maybe_lookup_success;
-      if (index === -1) {
-        return {
-          ok: false,
-          error: new CompilerError(ctx.start.line, "Unknown variable"),
-        };
-      }
-
-      const parent_index = current_env_index - env_index;
-      return {
-        ok: true,
-        value: {
-          max_stack_size: 1,
-          instructions: [
-            parent_index === 0
-              ? { opcode: OpCodes.LDLG, operands: [index] }
-              : {
-                  opcode: OpCodes.LDPG,
-                  operands: [index, parent_index],
-                },
-          ],
-        },
-      };
+      return this.visitName(name_ctx);
     }
 
     // Case 3: block
@@ -413,35 +453,27 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     const binary_operator_ctx = ctx.binary_operator();
     if (binary_operator_ctx !== undefined) {
       const left_instrs = this.visit(ctx.expression(0));
-      if (!left_instrs.ok) {
-        return left_instrs;
-      }
-
       const right_instrs = this.visit(ctx.expression(1));
-      if (!right_instrs.ok) {
-        return right_instrs;
-      }
-
-      const opcode = VALID_BINARY_OPERATORS.get(binary_operator_ctx.text)!;
-      const instructions = left_instrs.value.instructions.concat(
-        right_instrs.value.instructions,
-        [{ opcode, operands: [] }],
+      return compile_binary_expression(
+        binary_operator_ctx,
+        left_instrs,
+        right_instrs,
       );
+    }
+
+    // Case 5: Expression binary_logical_operator Expression
+    const binary_logical_operator_ctx = ctx.binary_logical_operator();
+    if (binary_logical_operator_ctx !== undefined) {
       return {
-        ok: true,
-        value: {
-          max_stack_size:
-            1 +
-            Math.max(
-              left_instrs.value.max_stack_size,
-              right_instrs.value.max_stack_size,
-            ),
-          instructions,
-        },
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          "Not implemented: Binary Logical Operator",
+        ),
       };
     }
 
-    // Case 5: unary_operator Expression
+    // Case 6: unary_operator Expression
     const unary_operator_ctx = ctx.unary_operator();
     if (unary_operator_ctx !== undefined) {
       const instrs = this.visit(ctx.expression(0));
@@ -462,28 +494,22 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
       };
     }
 
-    // Case 6: function_application
+    // Case 7: function_application
     const function_application_ctx = ctx.function_application();
     if (function_application_ctx !== undefined) {
       return this.visitFunction_application(function_application_ctx);
     }
 
-    // Case 7: (expression)
+    // Case 8: (expression)
     const parenthesized_expression = ctx.parens_expression();
     if (parenthesized_expression !== undefined) {
       return this.visitExpression(parenthesized_expression.expression());
     }
 
-    // Case 8: if_expression
+    // Case 9: if_expression
     const if_expression_ctx = ctx.if_expression();
     if (if_expression_ctx !== undefined) {
-      return {
-        ok: false,
-        error: new CompilerError(
-          ctx.start.line,
-          "Not implemented: If expression",
-        ),
-      };
+      return this.visitIf_expression(if_expression_ctx);
     }
 
     return {
@@ -491,20 +517,6 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
       error: new CompilerError(
         ctx.start.line,
         "Not implemented: Unknown Case Expression",
-      ),
-    };
-  }
-
-  visitBinary_logical_operator(
-    ctx: Binary_logical_operatorContext,
-  ): CompilerOutput {
-    this.print_fn("Visiting binary_logical_operator");
-
-    return {
-      ok: false,
-      error: new CompilerError(
-        ctx.start.line,
-        "Not implemented: Binary_logical_operator",
       ),
     };
   }
@@ -535,7 +547,7 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     return results;
   }
 
-  visitIf_expression(ctx: If_expressionContext): CompilerOutput {
+  visitIf_expression(ctx: If_expressionContext): InstructionCompilerOutput {
     this.print_fn("Visiting if_expression");
 
     return {
@@ -547,7 +559,7 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     };
   }
 
-  visitCond_expr(ctx: Cond_exprContext): CompilerOutput {
+  visitCond_expr(ctx: Cond_exprContext): InstructionCompilerOutput {
     this.print_fn("Visiting cond_expr");
 
     return {
@@ -702,36 +714,6 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
   visitFunction_body(ctx: Function_bodyContext): InstructionCompilerOutput {
     this.print_fn("Visiting function_body");
     return this.visitBlock(ctx.block());
-  }
-
-  visitParameter_list(ctx: Parameter_listContext): CompilerOutput {
-    this.print_fn("Visiting parameter_list");
-
-    return {
-      ok: false,
-      error: new CompilerError(
-        ctx.start.line,
-        "Not implemented: Parameter_list",
-      ),
-    };
-  }
-
-  visitParameter(ctx: ParameterContext): CompilerOutput {
-    this.print_fn("Visiting parameter");
-
-    return {
-      ok: false,
-      error: new CompilerError(ctx.start.line, "Not implemented: Parameter"),
-    };
-  }
-
-  visitParameters(ctx: ParametersContext): CompilerOutput {
-    this.print_fn("Visiting parameters");
-
-    return {
-      ok: false,
-      error: new CompilerError(ctx.start.line, "Not implemented: Parameters"),
-    };
   }
 
   visitStatement(ctx: StatementContext): InstructionCompilerOutput {
