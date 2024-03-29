@@ -15,6 +15,7 @@ import {
   printScopes,
   TypeAnnotation,
   value_to_type,
+  TypeTag,
 } from "./types";
 import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
 import { print, add_to_scope, in_scope_untyped, Result } from "../utils";
@@ -54,6 +55,12 @@ class DeclarationRuleValidator
   visitProgram(ctx: ProgramContext): Result<Boolean> {
     this.print_fn("Visiting program -> Initialising scope");
     this.scope = [new Map()];
+
+    add_to_scope(
+      this.scope,
+      "println!",
+      new TypeAnnotation(TypeTag.function, "<...> -> ()"),
+    );
     return this.visitChildren(ctx);
   }
 
