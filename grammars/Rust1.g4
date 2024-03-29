@@ -31,8 +31,10 @@ if_expression:
 	'if' cond_expr block ('else' (block | if_expression))?;
 cond_expr: expression;
 
+args_list: '()' | '(' args ')';
+args: (expression (',' expression)*)?;
 function_application:
-	function_name '(' (expression (',' expression)*)? ')';
+	function_name args_list;
 
 block: '{' (statement)* (expression)? '}';
 function_body: block;
