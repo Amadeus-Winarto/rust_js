@@ -274,6 +274,7 @@ class TypeProducer
     const intermediate_blocks = this.block_results.slice(0, -1);
 
     // Check return types of intermediate blocks
+    let intermediate_return_type = TypeTag.unknown;
     for (const block of intermediate_blocks) {
       if (
         block.return_type.type !== TypeTag.empty &&
@@ -286,27 +287,36 @@ class TypeProducer
           ),
         };
       }
+
+      intermediate_return_type =
+        intermediate_return_type === TypeTag.unknown
+          ? block.return_type.type
+          : intermediate_return_type;
     }
 
     if (
       final_block.block_type.type === TypeTag.empty &&
       final_block.return_type.type === TypeTag.empty
     ) {
-      // No final expression and no return statement -> Only unit type is allowed
       this.print_fn(
-        "No final expression and no return statement -> Only empty type is allowed",
+        "No final expression and no return statement -> Either function declared to return empty type or all blocks return empty type",
       );
       return return_type === TypeTag.empty
         ? {
             ok: true,
             value: type,
           }
-        : {
-            ok: false,
-            error: new Error(
-              `Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got unit type`,
-            ),
-          };
+        : is_promotable(intermediate_return_type, value_to_type(return_type))
+          ? {
+              ok: true,
+              value: type,
+            }
+          : {
+              ok: false,
+              error: new Error(
+                `Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got empty type`,
+              ),
+            };
     } else if (
       final_block.block_type.type === TypeTag.empty &&
       final_block.return_type.type !== TypeTag.empty
@@ -345,7 +355,9 @@ class TypeProducer
     } else {
       // Both final expression and return statement are present
       this.print_fn("Both final expression and return statement are present");
-      if (return_type !== final_block.return_type.type) {
+      if (
+        !is_promotable(final_block.return_type.type, value_to_type(return_type))
+      ) {
         return {
           ok: false,
           error: new Error(
@@ -354,7 +366,9 @@ class TypeProducer
         };
       }
 
-      if (return_type !== final_block.block_type.type) {
+      if (
+        !is_promotable(final_block.block_type.type, value_to_type(return_type))
+      ) {
         return {
           ok: false,
           error: new Error(
