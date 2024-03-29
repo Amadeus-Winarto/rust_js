@@ -28,11 +28,8 @@ export type Program = {
 };
 
 export class CompilerError extends Error {
-  constructor(
-    public line: number,
-    public message: string,
-  ) {
-    super(message);
+  constructor(line_number: number, message: string) {
+    super("Line " + line_number + ": " + message);
     this.name = "CompilerError";
   }
 }

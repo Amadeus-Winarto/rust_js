@@ -56,48 +56,6 @@ const VALID_BINARY_OPERATORS = new Map([
 
 type CompilerOutput = Result<Program, CompilerError>;
 
-function extractAndRenameNames(
-  ctx: BlockContext,
-  names: Map<string, number>,
-  rename: boolean = true,
-) {
-  // TODO: Implement this
-  const const_decls = ctx
-    .statement()
-    .map((stmt) => stmt.constant_declaration())
-    .filter((decl) => decl !== undefined);
-
-  for (const declaration of const_decls) {
-    const line_number = declaration.start.line;
-    const column_number = declaration.start.charPositionInLine;
-
-    const name = rename
-      ? `${declaration.const_name().text}_${line_number}_${column_number}`
-      : declaration.const_name().text;
-
-    const index = names.size;
-    names.set(name, index);
-  }
-
-  const var_decls = ctx
-    .statement()
-    .map((stmt) => stmt.variable_declaration())
-    .filter((decl) => decl !== undefined);
-  for (const declaration of var_decls) {
-    const line_number = declaration.start.line;
-    const column_number = declaration.start.charPositionInLine;
-
-    const name = rename
-      ? `${declaration.var_name().text}_${line_number}_${column_number}`
-      : declaration.var_name().text;
-
-    const index = names.size;
-    names.set(name, index);
-  }
-
-  // Recursively extract names from nested blocks
-}
-
 type Output = {
   max_stack_size: number;
   instructions: Instructions;
@@ -138,6 +96,10 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
   ) {
     super();
     this.print_fn = print(debug_mode);
+  }
+
+  setEnvironments(envs: Environment[]): void {
+    this.environments = envs;
   }
 
   defaultResult(): InstructionCompilerOutput {
@@ -479,6 +441,59 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
       };
     }
 
+    // Case 5: unary_operator Expression
+    const unary_operator_ctx = ctx.unary_operator();
+    if (unary_operator_ctx !== undefined) {
+      // const instrs = this.visit(ctx.expression(0));
+      // if (!instrs.ok) {
+      //   return instrs;
+      // }
+
+      // const opcode = VALID_UNARY_OPERATORS.get(unary_operator_ctx.text)!;
+      // const instructions = instrs.value.instructions.concat([
+      //   { opcode, operands: [] },
+      // ]);
+      // return {
+      //   ok: true,
+      //   value: {
+      //     max_stack_size: instrs.value.max_stack_size,
+      //     instructions,
+      //   },
+      // };
+
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          "Not implemented: Unary operators",
+        ),
+      };
+    }
+
+    // Case 6: function_application
+    const function_application_ctx = ctx.function_application();
+    if (function_application_ctx !== undefined) {
+      return this.visitFunction_application(function_application_ctx);
+    }
+
+    // Case 7: (expression)
+    const parenthesized_expression = ctx.parens_expression();
+    if (parenthesized_expression !== undefined) {
+      return this.visitExpression(parenthesized_expression.expression());
+    }
+
+    // Case 8: if_expression
+    const if_expression_ctx = ctx.if_expression();
+    if (if_expression_ctx !== undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          "Not implemented: If expression",
+        ),
+      };
+    }
+
     return {
       ok: false,
       error: new CompilerError(
@@ -550,15 +565,72 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     };
   }
 
-  visitFunction_application(ctx: Function_applicationContext): CompilerOutput {
+  visitFunction_application(
+    ctx: Function_applicationContext,
+  ): InstructionCompilerOutput {
     this.print_fn("Visiting function_application");
 
+    const function_name = ctx.function_name().text;
+
+    // TODO: This allows variable names to shadow function names!
+    const maybe_lookup_success = name_recursive_lookup(
+      this.environments,
+      function_name,
+    );
+
+    if (maybe_lookup_success === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          `Function ${function_name} not found in environment. This is a Validator error.`,
+        ),
+      };
+    }
+
+    const instructions = [];
+
+    // Load the function to the stack
+    console.log(this.environments);
+    const [env_index, index] = maybe_lookup_success;
+    const parent_index = this.environments.length - 1 - env_index;
+
+    instructions.push(
+      parent_index === 0
+        ? { opcode: OpCodes.LDLG, operands: [index] }
+        : {
+            opcode: OpCodes.LDPG,
+            operands: [index, parent_index],
+          },
+    );
+
+    // Load the arguments to the stack
+    let max_stack_size = 0;
+    const arguments_list = ctx.args_list().args()?.expression() || [];
+    for (const argument of arguments_list) {
+      const maybe_compiled_argument = this.visitExpression(argument);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+      max_stack_size = Math.max(
+        max_stack_size,
+        maybe_compiled_argument.value.max_stack_size,
+      );
+
+      instructions.push(...maybe_compiled_argument.value.instructions);
+    }
+
+    // Call the function
+    instructions.push({
+      opcode: OpCodes.CALL,
+      operands: [arguments_list.length],
+    });
     return {
-      ok: false,
-      error: new CompilerError(
-        ctx.start.line,
-        "Not implemented: Function_application",
-      ),
+      ok: true,
+      value: {
+        max_stack_size: arguments_list.length + max_stack_size,
+        instructions,
+      },
     };
   }
 
@@ -568,9 +640,23 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
 
     const instructions: Instructions = [];
 
+    // Count number of declarations
+    const num_declarations = ctx
+      .statement()
+      .filter(
+        (x) =>
+          x.constant_declaration() !== undefined ||
+          x.variable_declaration() !== undefined,
+      ).length;
+
     // Create a new environment
-    this.environments.push(new Environment());
-    instructions.push({ opcode: OpCodes.NEWENV, operands: [] });
+    if (num_declarations > 0) {
+      this.environments.push(new Environment());
+      instructions.push({
+        opcode: OpCodes.NEWENV,
+        operands: [num_declarations],
+      });
+    }
 
     // Compile the statements
     const statements = ctx.statement();
@@ -610,8 +696,10 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     }
 
     // Pop the environment
-    instructions.push({ opcode: OpCodes.POPENV, operands: [] });
-    this.environments.pop();
+    if (num_declarations > 0) {
+      instructions.push({ opcode: OpCodes.POPENV, operands: [] });
+      this.environments.pop();
+    }
 
     // Return the compiled instructions
     return {
@@ -680,10 +768,14 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     // Case 3: Return expression
     const maybe_return_expression = ctx.return_expression();
     if (maybe_return_expression !== undefined) {
-      return {
-        ok: false,
-        error: new CompilerError(ctx.start.line, "Not implemented: Return"),
-      };
+      const results = this.visitExpression(
+        maybe_return_expression.expression(),
+      );
+      if (!results.ok) {
+        return results;
+      }
+      results.value.instructions.push({ opcode: OpCodes.RETG, operands: [] });
+      return results;
     }
 
     // Case 4: Expression
@@ -800,31 +892,35 @@ export class Rust1Compiler
       .map((x) => x.function_declaration())
       .filter((x) => x !== undefined);
 
+    const initial_instructions: Instructions = [];
     for (const func_decl of function_decls) {
       const function_name = func_decl.function_name().text;
       const type = func_decl.type().text;
-
-      if (this.function_env.lookup(function_name) !== undefined) {
-        return {
-          ok: false,
-          error: new CompilerError(
-            func_decl.start.line,
-            "Cannot redeclare a function. This is a Validator error.",
-          ),
-        };
-      }
 
       const parameter_list = func_decl.parameter_list();
       const num_args = parameter_list.parameters()?.parameter().length || 0;
 
       // Add to the environment
-      this.function_env.push(function_name, type);
+      const function_addr = this.function_env.push(function_name, type);
       this.functions.push({
         stack_size: NaN,
         environment_size: num_args,
         num_args: num_args,
         instructions: [],
       });
+
+      if (function_name !== "main") {
+        // No need to create a closure for the entry point
+        initial_instructions.push({
+          opcode: OpCodes.NEWC,
+          operands: [function_addr],
+        }); // Create a new closure
+
+        initial_instructions.push({
+          opcode: OpCodes.STLG,
+          operands: [function_addr],
+        }); // Store the closure in the environment
+      }
     }
 
     // Look for entry point
@@ -840,9 +936,30 @@ export class Rust1Compiler
     }
 
     // Compile each function separately
-    for (const function_addr in function_decls) {
+    for (
+      let function_addr = 0;
+      function_addr < function_decls.length;
+      function_addr++
+    ) {
       const func_decl = function_decls[function_addr];
       const func_body = func_decl.function_body();
+      const func_parameters =
+        func_decl.parameter_list().parameters()?.parameter() || [];
+      const parameter_env = new Environment();
+
+      // Add parameters to the parameter environment
+      for (let i = 0; i < func_parameters.length; i++) {
+        const param_name = func_parameters[i].IDENTIFIER().text;
+        const param_type = func_parameters[i].type().text;
+        parameter_env.push(param_name, param_type);
+      }
+
+      // Compile the function body
+      this.instruction_compiler.setEnvironments(
+        parameter_env.get_size() === 0
+          ? [this.function_env]
+          : [this.function_env, parameter_env],
+      );
       const maybe_compiled_function =
         this.instruction_compiler.visitFunction_body(func_body);
       if (!maybe_compiled_function.ok) {
@@ -865,9 +982,20 @@ export class Rust1Compiler
       const function_instructions = maybe_compiled_function.value;
 
       const function_obj = this.functions[function_addr];
-      function_obj.environment_size = function_obj.num_args + num_declarations;
-      function_obj.stack_size = function_instructions.max_stack_size;
-      function_obj.instructions = function_instructions.instructions;
+
+      if (function_addr === maybe_entry_point) {
+        function_obj.environment_size =
+          function_obj.num_args + num_declarations + function_decls.length - 1;
+        function_obj.stack_size = function_instructions.max_stack_size;
+        function_obj.instructions = initial_instructions.concat(
+          function_instructions.instructions,
+        );
+      } else {
+        function_obj.environment_size =
+          function_obj.num_args + num_declarations;
+        function_obj.stack_size = function_instructions.max_stack_size;
+        function_obj.instructions = function_instructions.instructions;
+      }
     }
 
     // Print values

@@ -3,7 +3,7 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 fn main() -> () {
-    add(5, 2);
-    println!("Hello, world!", "Test");
+    let add : i32 = 5; 
+    add(3, 2);
 }
 
