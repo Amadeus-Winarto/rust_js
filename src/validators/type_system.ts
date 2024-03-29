@@ -136,14 +136,16 @@ class TypeProducer
     this.return_types.push([]);
 
     // Check all statements
-    ctx
+    const statement_problems = ctx
       .statement()
       .map((statement) => this.visit(statement))
-      .forEach((result) => {
-        if (!result.ok) {
-          return result;
-        }
+      .filter((result) => {
+        return !result.ok;
       });
+
+    if (statement_problems.length > 0) {
+      return statement_problems[0];
+    }
 
     // Check that all return types are the same
     const return_types = this.return_types.pop();
