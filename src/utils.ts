@@ -8,10 +8,9 @@ export const print = (is_debug: boolean) => {
 };
 
 export function in_scope_untyped(scope: Scope[], name: string): boolean {
-  for (const s of scope) {
-    if (s.has(name)) {
-      return true;
-    }
+  const last_scope = scope[scope.length - 1];
+  if (last_scope.has(name)) {
+    return true;
   }
   return false;
 }
