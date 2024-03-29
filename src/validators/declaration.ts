@@ -18,7 +18,13 @@ import {
   TypeTag,
 } from "./types";
 import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
-import { print, add_to_scope, in_scope_untyped, Result } from "../utils";
+import {
+  print,
+  add_to_scope,
+  in_scope_untyped,
+  Result,
+  in_scope_untyped_recursive,
+} from "../utils";
 import { SemanticError } from "./utils/errors";
 
 class DeclarationRuleValidator
@@ -202,7 +208,7 @@ class DeclarationRuleValidator
     const name_ctx = ctx.name();
     if (name_ctx !== undefined) {
       const name = name_ctx.text;
-      if (!in_scope_untyped(this.scope, name)) {
+      if (!in_scope_untyped_recursive(this.scope, name)) {
         this.print_fn("Error: name '", name, "' not declared in this scope");
         return {
           ok: false,
@@ -227,7 +233,7 @@ class DeclarationRuleValidator
     this.print_fn("Visiting function_application");
     const name = ctx.function_name().text;
 
-    if (!in_scope_untyped(this.scope, name)) {
+    if (!in_scope_untyped_recursive(this.scope, name)) {
       this.print_fn("Error: function '", name, "' not declared in this scope");
       return {
         ok: false,

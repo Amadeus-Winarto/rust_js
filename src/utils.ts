@@ -15,6 +15,18 @@ export function in_scope_untyped(scope: Scope[], name: string): boolean {
   return false;
 }
 
+export function in_scope_untyped_recursive(
+  scope: Scope[],
+  name: string,
+): boolean {
+  for (const s of scope) {
+    if (s.has(name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function get_type(
   scope: Scope[],
   name: string,
