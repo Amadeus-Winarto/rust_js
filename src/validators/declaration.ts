@@ -2,10 +2,10 @@ import {
   BlockContext,
   Constant_declarationContext,
   ExpressionContext,
+  Function_applicationContext,
   Function_declarationContext,
   Parameter_listContext,
   ProgramContext,
-  StatementContext,
   Variable_declarationContext,
 } from "../grammars/Rust1Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
@@ -213,6 +213,24 @@ class DeclarationRuleValidator
     }
 
     // Case 3: All other cases
+    return this.visitChildren(ctx);
+  }
+
+  visitFunction_application(ctx: Function_applicationContext): Result<Boolean> {
+    this.print_fn("Visiting function_application");
+    const name = ctx.function_name().text;
+
+    if (!in_scope_untyped(this.scope, name)) {
+      this.print_fn("Error: function '", name, "' not declared in this scope");
+      return {
+        ok: false,
+        error: new SemanticError(
+          ctx.start.line,
+          "Function '" + name + "' not declared in this scope",
+        ),
+      };
+    }
+
     return this.visitChildren(ctx);
   }
 }
