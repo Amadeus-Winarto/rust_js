@@ -444,29 +444,21 @@ class Rust1InstructionCompiler extends AbstractParseTreeVisitor<InstructionCompi
     // Case 5: unary_operator Expression
     const unary_operator_ctx = ctx.unary_operator();
     if (unary_operator_ctx !== undefined) {
-      // const instrs = this.visit(ctx.expression(0));
-      // if (!instrs.ok) {
-      //   return instrs;
-      // }
+      const instrs = this.visit(ctx.expression(0));
+      if (!instrs.ok) {
+        return instrs;
+      }
 
-      // const opcode = VALID_UNARY_OPERATORS.get(unary_operator_ctx.text)!;
-      // const instructions = instrs.value.instructions.concat([
-      //   { opcode, operands: [] },
-      // ]);
-      // return {
-      //   ok: true,
-      //   value: {
-      //     max_stack_size: instrs.value.max_stack_size,
-      //     instructions,
-      //   },
-      // };
-
+      const opcode = VALID_UNARY_OPERATORS.get(unary_operator_ctx.text)!;
+      const instructions = instrs.value.instructions.concat([
+        { opcode, operands: [] },
+      ]);
       return {
-        ok: false,
-        error: new CompilerError(
-          ctx.start.line,
-          "Not implemented: Unary operators",
-        ),
+        ok: true,
+        value: {
+          max_stack_size: instrs.value.max_stack_size,
+          instructions,
+        },
       };
     }
 

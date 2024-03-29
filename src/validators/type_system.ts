@@ -27,6 +27,17 @@ import {
 import { print, add_to_scope, get_type, Result } from "../utils";
 import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
 
+const get_unary_type_checker = (operator: string) => {
+  switch (operator) {
+    case "!":
+      return is_bool;
+    case "-":
+      return (type: TypeTag) => is_integer(type) || is_float(type);
+    default:
+      return () => false;
+  }
+};
+
 type BlockResults = {
   block_type: TypeAnnotation;
   return_type: TypeAnnotation;
@@ -608,24 +619,23 @@ class TypeProducer
     // Case 6: Unary operator
     const unary_ctx = ctx.unary_operator();
     if (unary_ctx !== undefined) {
+      const type_checker = get_unary_type_checker(unary_ctx.text);
       const expr = this.visit(ctx.expression(0));
       if (!expr.ok) {
         return expr;
       }
 
-      if (is_bool(expr.value.type)) {
-        return {
-          ok: true,
-          value: new TypeAnnotation(TypeTag.bool),
-        };
-      }
-
-      return {
-        ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: type mismatch: operator ${unary_ctx.text} expects boolean type but got ${expr.value.type}`,
-        ),
-      };
+      return type_checker(expr.value.type)
+        ? {
+            ok: true,
+            value: expr.value,
+          }
+        : {
+            ok: false,
+            error: new Error(
+              `Line ${ctx.start.line}: type mismatch: operator ${unary_ctx.text} expects boolean type but got ${expr.value.type}`,
+            ),
+          };
     }
 
     // Case 7: function application
