@@ -2,7 +2,7 @@ import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
 import { Result } from "../utils";
 import OpCodes from "./opcodes";
 
-type Operand = number | string;
+export type Operand = number | string;
 export class Instruction {
   opcode: OpCodes;
   operands: Operand[];
@@ -15,6 +15,18 @@ export class Instruction {
 
 export type Instructions = Instruction[];
 
+export interface SVMFunction {
+  stack_size: number;
+  environment_size: number;
+  num_args: number;
+  instructions: Instruction[];
+}
+
+export type Program = {
+  entry_point: number | undefined;
+  functions: SVMFunction[];
+};
+
 export class CompilerError extends Error {
   constructor(
     public line: number,
@@ -25,9 +37,67 @@ export class CompilerError extends Error {
   }
 }
 
-export interface Compiler
-  extends RustVisitor<Result<Instructions, CompilerError>> {
+export interface Compiler extends RustVisitor<Result<Program, CompilerError>> {
   language_version: string;
+}
+
+/**
+ * Defines a context for the compiler to use during compilation.
+ */
+export class CompileTimeContext {
+  private size: number;
+  private names: string[];
+  private types: string[];
+  private values: Operand[];
+
+  constructor() {
+    this.size = 0;
+    this.names = [];
+    this.types = [];
+    this.values = [];
+  }
+
+  push(name: string, type: string, value: Operand): number {
+    const index = this.size;
+    this.size++;
+    this.names.push(name);
+    this.types.push(type);
+    this.values.push(value);
+    return index;
+  }
+
+  pop(): number {
+    const index = this.size - 1;
+    this.names.pop();
+    this.types.pop();
+    this.values.pop();
+    this.size--;
+    return index;
+  }
+
+  lookup(name: string): number | undefined {
+    const index = this.names.indexOf(name);
+    if (index !== -1) {
+      return index;
+    }
+    return undefined;
+  }
+
+  num_variables(): number {
+    return this.size;
+  }
+
+  get_name(index: number): string {
+    return this.names[index];
+  }
+
+  get_type(index: number): string {
+    return this.types[index];
+  }
+
+  get_value(index: number): Operand {
+    return this.values[index];
+  }
 }
 
 export class Environment {
@@ -65,6 +135,10 @@ export class Environment {
     return undefined;
   }
 
+  get_size(): number {
+    return this.size;
+  }
+
   get_name(index: number): string {
     return this.names[index];
   }
@@ -74,7 +148,7 @@ export class Environment {
   }
 }
 
-export function name_lookup(
+export function name_recursive_lookup(
   envs: Environment[],
   name: string,
 ): [number, number] | undefined {
@@ -88,56 +162,20 @@ export function name_lookup(
 }
 
 export type LoadPrimitiveConstantsOpcode =
-  | OpCodes.LDCI
-  | OpCodes.LDCF32
-  | OpCodes.LDCB0
-  | OpCodes.LDCB1
-  | OpCodes.LGCS;
+  | OpCodes.LGCI
+  | OpCodes.LGCF32
+  | OpCodes.LGCB0
+  | OpCodes.LGCB1
+  | OpCodes.LGCS
+  | OpCodes.NEWC;
 export const PrimitiveTypeToOpcode = new Map<
   string,
   LoadPrimitiveConstantsOpcode
 >([
-  ["i32", OpCodes.LDCI],
-  ["f32", OpCodes.LDCF32],
-  ["false", OpCodes.LDCB0],
-  ["true", OpCodes.LDCB1],
+  ["i32", OpCodes.LGCI],
+  ["f32", OpCodes.LGCF32],
+  ["false", OpCodes.LGCB0],
+  ["true", OpCodes.LGCB1],
   ["string", OpCodes.LGCS],
-]);
-
-export type PopPrimitiveConstantsOpcode =
-  | OpCodes.POPF
-  | OpCodes.POPB
-  | OpCodes.POPG;
-export const PopOpcodeByType = new Map<string, PopPrimitiveConstantsOpcode>([
-  ["i32", OpCodes.POPF],
-  ["f32", OpCodes.POPF],
-  ["bool", OpCodes.POPB],
-  ["string", OpCodes.POPG],
-]);
-
-export type StorePrimitiveConstantsOpcode =
-  | OpCodes.STLF
-  | OpCodes.STLB
-  | OpCodes.STLG;
-export const StoreOpcodeByType = new Map<string, StorePrimitiveConstantsOpcode>(
-  [
-    ["i32", OpCodes.STLF],
-    ["f32", OpCodes.STLF],
-    ["bool", OpCodes.STLB],
-    ["string", OpCodes.STLG],
-  ],
-);
-
-export type LoadPrimitiveVariablesOpcode =
-  | OpCodes.LDPF
-  | OpCodes.LDPB
-  | OpCodes.LDPG;
-export const LoadPrimitiveFromEnvByType = new Map<
-  string,
-  LoadPrimitiveVariablesOpcode
->([
-  ["i32", OpCodes.LDPF],
-  ["f32", OpCodes.LDPF],
-  ["bool", OpCodes.LDPB],
-  ["string", OpCodes.LDPG],
+  ["function", OpCodes.NEWC],
 ]);

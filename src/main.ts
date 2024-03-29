@@ -4,14 +4,15 @@ import { existsSync, readFileSync } from "fs";
 import { CharStreams, CommonTokenStream } from "antlr4ts";
 import { Rust1Lexer as RustLexer } from "./grammars/Rust1Lexer";
 import { Rust1Parser as RustParser } from "./grammars/Rust1Parser";
-import { Validator } from "./validators/types";
 
+import { Validator } from "./validators/types";
 import { SyntaxValidator } from "./validators/syntax";
 import { EntrypointValidator } from "./validators/entrypoint";
 import { DeclarationValidator } from "./validators/declaration";
 import { TypeSystemValidator } from "./validators/type_system";
 
 import { Rust1Compiler } from "./compilers/rust1_compiler";
+import { OpCodes } from "./compilers/opcodes";
 
 const DEBUG_MODE = false;
 
@@ -92,16 +93,40 @@ async function main() {
     }
   }
   console.log("Validation passed!");
+  console.log();
 
   // Compile the program
   const compiler = new Rust1Compiler(DEBUG_MODE);
+  console.log("Compiling...");
   const result = compiler.visit(tree);
   if (!result.ok) {
     console.error("Compilation failed: ", result.error);
     process.exit(1);
   }
   console.log("Compilation passed!");
-  console.log("Instructions: ", result.value);
+  console.log("Program: ");
+  const program = result.value;
+  console.log("\tEntry function: ", program.entry_point);
+  console.log("\tFunctions: ");
+  for (const func of program.functions) {
+    console.log("\t\tStack size: ", func.stack_size);
+    console.log("\t\tEnvironment size: ", func.environment_size);
+    console.log("\t\tNum args: ", func.num_args);
+
+    console.log("\t\tInstructions: ");
+    let instr_idx = 0;
+    for (const instr of func.instructions) {
+      console.log(
+        "\t\t\t",
+        instr_idx,
+        " : ",
+        OpCodes[instr.opcode],
+        instr.operands,
+      );
+      instr_idx++;
+    }
+    console.log();
+  }
   process.exit(0);
 }
 
