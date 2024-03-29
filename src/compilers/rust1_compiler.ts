@@ -114,6 +114,54 @@ function compile_binary_expression(
   };
 }
 
+function compile_conditional(
+  cond_instrs: InstructionCompilerOutput,
+  consequent_instrs: InstructionCompilerOutput,
+  alternative_instrs: InstructionCompilerOutput,
+): InstructionCompilerOutput {
+  const instructions = [];
+  if (!cond_instrs.ok) {
+    return cond_instrs;
+  }
+
+  if (!consequent_instrs.ok) {
+    return consequent_instrs;
+  }
+
+  if (!alternative_instrs.ok) {
+    return alternative_instrs;
+  }
+
+  const max_stack_size = Math.max(
+    cond_instrs.value.max_stack_size,
+    consequent_instrs.value.max_stack_size,
+    alternative_instrs.value.max_stack_size,
+  );
+
+  const BRF_instr = {
+    opcode: OpCodes.BRF,
+    operands: [2 + consequent_instrs.value.instructions.length],
+  };
+  const BR_instr = {
+    opcode: OpCodes.BR,
+    operands: [1 + alternative_instrs.value.instructions.length],
+  };
+
+  instructions.push(...cond_instrs.value.instructions);
+  instructions.push(BRF_instr);
+  instructions.push(...consequent_instrs.value.instructions);
+  instructions.push(BR_instr);
+  instructions.push(...alternative_instrs.value.instructions);
+
+  return {
+    ok: true,
+    value: {
+      max_stack_size,
+      instructions,
+    },
+  };
+}
+
 class Rust1InstructionCompiler
   extends AbstractParseTreeVisitor<InstructionCompilerOutput>
   implements RustVisitor<InstructionCompilerOutput>
@@ -463,11 +511,27 @@ class Rust1InstructionCompiler
     // Case 5: Expression binary_logical_operator Expression
     const binary_logical_operator_ctx = ctx.binary_logical_operator();
     if (binary_logical_operator_ctx !== undefined) {
+      const left_instrs = this.visit(ctx.expression(0));
+      const right_instrs = this.visit(ctx.expression(1));
+      if (binary_logical_operator_ctx.text === "&&") {
+        return compile_conditional(
+          left_instrs,
+          right_instrs,
+          left_instrs, // If left_instrs is false, then the result is false
+        );
+      } else if (binary_logical_operator_ctx.text === "||") {
+        return compile_conditional(
+          left_instrs,
+          left_instrs, // If left_instrs is true, then the result is true
+          right_instrs,
+        );
+      }
+
       return {
         ok: false,
         error: new CompilerError(
           ctx.start.line,
-          "Not implemented: Binary Logical Operator",
+          `Unknown binary_logical_operator: ${binary_logical_operator_ctx.text}. This should not happen.`,
         ),
       };
     }
@@ -548,66 +612,24 @@ class Rust1InstructionCompiler
 
   visitIf_expression(ctx: If_expressionContext): InstructionCompilerOutput {
     this.print_fn("Visiting if_expression");
-
-    const instructions = [];
-    const cond_instrs = this.visit(ctx.cond_expr());
-    if (!cond_instrs.ok) {
-      return cond_instrs;
-    }
-
-    const consequent_instrs = this.visit(ctx.block(0));
-    if (!consequent_instrs.ok) {
-      return consequent_instrs;
-    }
-
-    const alternative_instrs: InstructionCompilerOutput =
-      ctx.block(1) !== undefined
-        ? this.visit(ctx.block(1))
-        : {
-            ok: true,
-            value: {
-              max_stack_size: 0,
-              instructions: [
-                {
-                  opcode: OpCodes.NOP,
-                  operands: [],
-                },
-              ],
-            },
-          };
-
-    if (!alternative_instrs.ok) {
-      return alternative_instrs;
-    }
-
-    const max_stack_size = Math.max(
-      cond_instrs.value.max_stack_size,
-      consequent_instrs.value.max_stack_size,
-      alternative_instrs.value.max_stack_size,
-    );
-
-    const BRF_instr = {
-      opcode: OpCodes.BRF,
-      operands: [2 + consequent_instrs.value.instructions.length],
-    };
-    const BR_instr = {
-      opcode: OpCodes.BR,
-      operands: [1 + alternative_instrs.value.instructions.length],
-    };
-
-    instructions.push(...cond_instrs.value.instructions);
-    instructions.push(BRF_instr);
-    instructions.push(...consequent_instrs.value.instructions);
-    instructions.push(BR_instr);
-    instructions.push(...alternative_instrs.value.instructions);
-
-    return {
+    const noop: InstructionCompilerOutput = {
       ok: true,
       value: {
-        max_stack_size,
-        instructions,
+        max_stack_size: 0,
+        instructions: [
+          {
+            opcode: OpCodes.NOP,
+            operands: [],
+          },
+        ],
       },
     };
+
+    return compile_conditional(
+      this.visit(ctx.cond_expr()),
+      this.visit(ctx.block(0)),
+      ctx.block(1) !== undefined ? this.visit(ctx.block(1)) : noop,
+    );
   }
 
   visitCond_expr(ctx: Cond_exprContext): InstructionCompilerOutput {
