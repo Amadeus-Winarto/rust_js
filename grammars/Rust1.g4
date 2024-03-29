@@ -33,8 +33,7 @@ cond_expr: expression;
 
 args_list: '()' | '(' args ')';
 args: (expression (',' expression)*)?;
-function_application:
-	function_name args_list;
+function_application: function_name args_list;
 
 block: '{' (statement)* (expression)? '}';
 function_body: block;
@@ -48,6 +47,7 @@ binary_operator:
 	| '-'
 	| '*'
 	| '/'
+	| '%'
 	| '=='
 	| '!='
 	| '<'
