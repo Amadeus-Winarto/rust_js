@@ -890,7 +890,43 @@ export class Rust1Compiler
     };
   }
 
+  visitConstant_declaration(ctx: Constant_declarationContext): CompilerOutput {
+    const decl_name = ctx.const_name().text;
+    const decl_type = ctx.type().text;
+
+    // Cannot redeclare a constant
+    if (this.constant_env.lookup(decl_name) !== undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          "Cannot redeclare a constant. This is a Validator error.",
+        ),
+      };
+    }
+
+    const eval_value = this.compile_time_evaluator.visitExpression(
+      ctx.expression(),
+    );
+    if (!eval_value.ok) {
+      return {
+        ok: false,
+        error: eval_value.error,
+      };
+    }
+    this.constant_env.push(decl_name, decl_type, eval_value.value);
+    return {
+      ok: true,
+      value: {
+        entry_point: undefined,
+        functions: [],
+      },
+    };
+  }
+
   visitProgram(ctx: ProgramContext): CompilerOutput {
+    // TODO: Compile predeclared functions
+
     // Hoist all constant declarations
     const const_decls = ctx
       .program_element()
@@ -898,30 +934,10 @@ export class Rust1Compiler
       .filter((x) => x !== undefined);
 
     for (const const_decl of const_decls) {
-      const decl_name = const_decl.const_name().text;
-      const decl_type = const_decl.type().text;
-
-      // Cannot redeclare a constant
-      if (this.constant_env.lookup(decl_name) !== undefined) {
-        return {
-          ok: false,
-          error: new CompilerError(
-            const_decl.start.line,
-            "Cannot redeclare a constant. This is a Validator error.",
-          ),
-        };
+      const maybe_result = this.visitConstant_declaration(const_decl!);
+      if (!maybe_result.ok) {
+        return maybe_result;
       }
-
-      const eval_value = this.compile_time_evaluator.visitExpression(
-        const_decl.expression(),
-      );
-      if (!eval_value.ok) {
-        return {
-          ok: false,
-          error: eval_value.error,
-        };
-      }
-      this.constant_env.push(decl_name, decl_type, eval_value.value);
     }
 
     // Hoist all function declarations

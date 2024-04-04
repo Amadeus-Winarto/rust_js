@@ -15,12 +15,12 @@ export class Instruction {
 
 export type Instructions = Instruction[];
 
-export interface SVMFunction {
+export type SVMFunction = {
   stack_size: number;
   environment_size: number;
   num_args: number;
   instructions: Instruction[];
-}
+};
 
 export type Program = {
   entry_point: number | undefined;
