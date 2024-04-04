@@ -13,8 +13,14 @@ import { TypeSystemValidator } from "./validators/type_system";
 
 import { Rust1Compiler } from "./compilers/rust1_compiler";
 import { OpCodes } from "./compilers/opcodes";
+import { saveJson } from "./utils";
+import { Instruction } from "./compilers/compiler";
 
 const DEBUG_MODE = false;
+const get_basename = (filename: string) => filename.split(/[\\/]/).pop();
+const instruction_to_string = (instruction: Instruction) => {
+  return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
+};
 
 async function blocking_input() {
   if (process.env.npm_config_filename) {
@@ -47,11 +53,13 @@ function is_file(filename: string): boolean {
 // Main function
 async function main() {
   const input_string = await blocking_input();
+  let is_input_file = false;
   const program_string = (function () {
     if (!is_file(input_string)) {
       console.log("Interpreting input as program string!");
       return input_string;
     } else {
+      is_input_file = true;
       return readFileSync(input_string, "utf8");
     }
   })();
@@ -104,8 +112,15 @@ async function main() {
     process.exit(1);
   }
   console.log("Compilation passed!");
-  console.log("Program: ");
   const program = result.value;
+
+  saveJson(
+    program,
+    "output/" +
+      (is_input_file ? get_basename(input_string) + ".json" : "output.json"),
+  );
+
+  console.log("Program: ");
   console.log("\tEntry function: ", program.entry_point);
   console.log("\tFunctions: ");
   for (const func of program.functions) {
@@ -116,13 +131,7 @@ async function main() {
     console.log("\t\tInstructions: ");
     let instr_idx = 0;
     for (const instr of func.instructions) {
-      console.log(
-        "\t\t\t",
-        instr_idx,
-        " : ",
-        OpCodes[instr.opcode],
-        instr.operands,
-      );
+      console.log("\t\t\t", instr_idx, " : ", instruction_to_string(instr));
       instr_idx++;
     }
     console.log();

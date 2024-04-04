@@ -663,7 +663,6 @@ class Rust1InstructionCompiler
     const instructions = [];
 
     // Load the function to the stack
-    console.log(this.environments);
     const [env_index, index] = maybe_lookup_success;
     const parent_index = this.environments.length - 1 - env_index;
 
