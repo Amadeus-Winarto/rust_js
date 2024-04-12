@@ -3,12 +3,7 @@ import { Validator } from "./types";
 import { print, Result } from "../utils";
 import { ErrorNode } from "antlr4ts/tree/ErrorNode";
 import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
-import {
-  Function_bodyContext,
-  Function_declarationContext,
-  ProgramContext,
-  Return_expressionContext,
-} from "../grammars/Rust1Parser";
+import { ProgramContext } from "../grammars/Rust1Parser";
 import { SyntaxError } from "./utils/errors";
 
 class SyntaxRuleValidator
@@ -42,18 +37,6 @@ class SyntaxRuleValidator
     return aggregate && nextResult;
   }
 
-  visitFunction_declaration(ctx: Function_declarationContext): Result<boolean> {
-    // If function has a non-empty return type, it must have a return statement
-    // If function has a empty return type, it must not have a return statement
-
-    const return_type_string = ctx.type().text;
-
-    const has_empty_return_type = return_type_string === "()";
-    const body = ctx.function_body();
-
-    return this.have_return_statement(body, !has_empty_return_type);
-  }
-
   visitErrorNode(node: ErrorNode): Result<boolean> {
     this.print_fn("Visiting error node");
 
@@ -66,51 +49,6 @@ class SyntaxRuleValidator
           node.symbol.charPositionInLine +
           " is not allowed",
       ),
-    };
-  }
-
-  have_return_statement(
-    body: Function_bodyContext,
-    expect_return_statement: boolean,
-  ): Result<boolean> {
-    const return_statements = body
-      .block()
-      .statement()
-      .filter((statement) => statement.return_expression() !== undefined);
-
-    if (expect_return_statement && return_statements.length === 0) {
-      this.print_fn("No return statement found but expecting one");
-      return {
-        ok: false,
-        error: new SyntaxError(
-          body.start.line,
-          "No return statement found but expecting one",
-        ),
-      };
-    } else if (!expect_return_statement && return_statements.length > 0) {
-      this.print_fn("Return statement found but not expecting one");
-      return {
-        ok: false,
-        error: new SyntaxError(
-          body.start.line,
-          "Return statement found but not expecting one",
-        ),
-      };
-    }
-
-    return {
-      ok: true,
-      value: true,
-    };
-  }
-
-  visitReturn_expression(ctx: Return_expressionContext): Result<boolean> {
-    const line_number = ctx.start.line;
-    this.print_fn("Not expecting return statement at line " + line_number);
-
-    return {
-      ok: false,
-      error: new SyntaxError(line_number, "Not expecting return statement"),
     };
   }
 }

@@ -6,7 +6,7 @@ export enum TypeTag {
   i64 = "i64",
   f32 = "f32",
   f64 = "f64",
-  empty = "empty",
+  empty = "()",
   bool = "bool",
   string = "string",
   function = "function",
@@ -57,7 +57,7 @@ export function value_to_type(value: string): TypeTag {
   if (value === "function") {
     return TypeTag.function;
   }
-  if (value === "empty" || value === "()") {
+  if (value === "()") {
     return TypeTag.empty;
   }
   if (value === "integer_literal") {

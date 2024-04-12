@@ -5,7 +5,6 @@ program_element: (constant_declaration | function_declaration);
 statement:
 	constant_declaration
 	| variable_declaration
-	| function_declaration
 	| return_expression ';' // We treat return_expression separately 
 	| expression ';';
 
@@ -29,13 +28,12 @@ expression:
 
 parens_expression: '(' expression ')';
 if_expression:
-	'if' cond_expr block (
-		('else' 'if' cond_expr block)* 'else' block
-	)?;
+	'if' cond_expr block ('else' (block | if_expression))?;
 cond_expr: expression;
 
-function_application:
-	function_name '(' (expression (',' expression)*)? ')';
+args_list: '()' | '(' args ')';
+args: (expression (',' expression)*)?;
+function_application: function_name args_list;
 
 block: '{' (statement)* (expression)? '}';
 function_body: block;
@@ -49,6 +47,7 @@ binary_operator:
 	| '-'
 	| '*'
 	| '/'
+	| '%'
 	| '=='
 	| '!='
 	| '<'

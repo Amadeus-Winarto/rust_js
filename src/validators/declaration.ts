@@ -2,10 +2,10 @@ import {
   BlockContext,
   Constant_declarationContext,
   ExpressionContext,
+  Function_applicationContext,
   Function_declarationContext,
   Parameter_listContext,
   ProgramContext,
-  StatementContext,
   Variable_declarationContext,
 } from "../grammars/Rust1Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
@@ -15,9 +15,16 @@ import {
   printScopes,
   TypeAnnotation,
   value_to_type,
+  TypeTag,
 } from "./types";
 import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
-import { print, add_to_scope, in_scope_untyped, Result } from "../utils";
+import {
+  print,
+  add_to_scope,
+  in_scope_untyped,
+  Result,
+  in_scope_untyped_recursive,
+} from "../utils";
 import { SemanticError } from "./utils/errors";
 
 class DeclarationRuleValidator
@@ -54,6 +61,12 @@ class DeclarationRuleValidator
   visitProgram(ctx: ProgramContext): Result<Boolean> {
     this.print_fn("Visiting program -> Initialising scope");
     this.scope = [new Map()];
+
+    add_to_scope(
+      this.scope,
+      "println!",
+      new TypeAnnotation(TypeTag.function, "<...> -> ()"),
+    );
     return this.visitChildren(ctx);
   }
 
@@ -195,7 +208,7 @@ class DeclarationRuleValidator
     const name_ctx = ctx.name();
     if (name_ctx !== undefined) {
       const name = name_ctx.text;
-      if (!in_scope_untyped(this.scope, name)) {
+      if (!in_scope_untyped_recursive(this.scope, name)) {
         this.print_fn("Error: name '", name, "' not declared in this scope");
         return {
           ok: false,
@@ -213,6 +226,24 @@ class DeclarationRuleValidator
     }
 
     // Case 3: All other cases
+    return this.visitChildren(ctx);
+  }
+
+  visitFunction_application(ctx: Function_applicationContext): Result<Boolean> {
+    this.print_fn("Visiting function_application");
+    const name = ctx.function_name().text;
+
+    if (!in_scope_untyped_recursive(this.scope, name)) {
+      this.print_fn("Error: function '", name, "' not declared in this scope");
+      return {
+        ok: false,
+        error: new SemanticError(
+          ctx.start.line,
+          "Function '" + name + "' not declared in this scope",
+        ),
+      };
+    }
+
     return this.visitChildren(ctx);
   }
 }

@@ -110,6 +110,16 @@ let x :i32 = {
 
 will bind the value `3` to the name `x`, because the block evaluates to the value of the last expression in the block, `y + 1`.
 
+The following program has a type error:
+
+```rust
+let x :i32 = {
+    let y :i32 = 2;
+};
+```
+
+This is because the block evaluates to `()`, the unit type, which is not an integer.
+
 ## Boolean operators
 
 Boolean operators in `Rust` have a special meaning. Usually, an operator combination evaluates all its arguments and then applies the operation to which the operator refers. For example, `(2 * 3) + (4 * 5)` evaluates `2 * 3` and `4 * 5` first, before the addition is carried out. However, the operator `&&` works differently. An expression e1 `&&` e2 should be seen as an abbreviation for `if e1 {e2} else {false}`. The expression e2 only gets evaluated if `e1` evaluates to `true`. The behaviour of `||` is similar: `e1 || e2` should be seen as an abbreviation for `if e1 {true} else {e2}`.
