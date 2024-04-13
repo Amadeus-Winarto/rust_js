@@ -2,8 +2,8 @@ import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor
 import { Validator } from "./types";
 import { print, Result } from "../utils";
 import { ErrorNode } from "antlr4ts/tree/ErrorNode";
-import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
-import { ProgramContext } from "../grammars/Rust1Parser";
+import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
+import { ProgramContext } from "../grammars/Rust2Parser";
 import { SyntaxError } from "./utils/errors";
 
 class SyntaxRuleValidator

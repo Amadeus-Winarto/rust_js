@@ -17,7 +17,7 @@ import {
   value_to_type,
   TypeTag,
 } from "./types";
-import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
+import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import {
   print,
   add_to_scope,
@@ -26,6 +26,10 @@ import {
   in_scope_untyped_recursive,
 } from "../utils";
 import { SemanticError } from "./utils/errors";
+import {
+  Closure_parameter_listContext,
+  ClosureContext,
+} from "../grammars/Rust2Parser";
 
 class DeclarationRuleValidator
   extends AbstractParseTreeVisitor<Result<Boolean>>
@@ -156,6 +160,22 @@ class DeclarationRuleValidator
     const result = this.visitChildren(ctx);
     this.scope.pop();
     return result;
+  }
+
+  visitClosure(ctx: ClosureContext): Result<Boolean> {
+    this.print_fn("Visiting closure");
+    this.print_fn("Creating new scope for closure parameters");
+    this.scope.push(new Map());
+    const result = this.visitChildren(ctx);
+    this.scope.pop();
+    return result;
+  }
+
+  visitClosure_parameter_list(
+    ctx: Closure_parameter_listContext,
+  ): Result<Boolean> {
+    this.print_fn("Visiting closure's parameter_list");
+    return this.visitParameter_list(ctx as Parameter_listContext);
   }
 
   visitParameter_list(ctx: Parameter_listContext): Result<Boolean> {

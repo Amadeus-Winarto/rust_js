@@ -1,5 +1,6 @@
 import {
   BlockContext,
+  ClosureContext,
   Cond_exprContext,
   Constant_declarationContext,
   ExpressionContext,
@@ -10,7 +11,7 @@ import {
   Return_expressionContext,
   StatementContext,
   Variable_declarationContext,
-} from "../grammars/Rust1Parser";
+} from "../grammars/Rust2Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import {
   Validator,
@@ -25,7 +26,7 @@ import {
   is_comparison_operator,
 } from "./types";
 import { print, add_to_scope, get_type, Result } from "../utils";
-import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
+import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 
 const get_unary_type_checker = (operator: string) => {
   switch (operator) {
@@ -142,7 +143,7 @@ class TypeProducer
   }
 
   visitBlock(ctx: BlockContext): Result<TypeAnnotation> {
-    this.print_fn("Checking block type");
+    this.print_fn("Checking block type: ", ctx.text);
     this.scope.push(new Map());
     this.return_types.push([]);
 
@@ -442,7 +443,7 @@ class TypeProducer
 
   visitExpression(ctx: ExpressionContext): Result<TypeAnnotation> {
     // Case 1: Literal
-    this.print_fn("Checking expression type");
+    this.print_fn("Checking expression type " + ctx.text);
     const literal_ctx = ctx.literal();
     if (literal_ctx !== undefined) {
       return literal_ctx.boolean_literal()
@@ -763,10 +764,188 @@ class TypeProducer
       return this.visit(if_ctx);
     }
 
+    // Case 10: closure expression
+    const closure_ctx = ctx.closure();
+    if (closure_ctx !== undefined) {
+      const current_idx = this.block_results.length;
+      const result = this.visitClosure(closure_ctx);
+      this.block_results = this.block_results.slice(0, current_idx);
+      return result;
+    }
+
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
       error: new Error(`Line ${ctx.start.line}: unknown expression type`),
+    };
+  }
+
+  visitClosure(ctx: ClosureContext): Result<TypeAnnotation> {
+    this.print_fn("Visiting closure");
+
+    // Extract return type
+    const return_type = value_to_type(ctx.type().text);
+
+    // Extract parameter types
+    const parameter_types: TypeAnnotation[] = [];
+    ctx
+      .closure_parameter_list()
+      ?.parameters()
+      ?.parameter()
+      .forEach((param) => {
+        const type = new TypeAnnotation(value_to_type(param.type().text));
+        parameter_types.push(type);
+      });
+    const parameter_type =
+      "<" + parameter_types.map((t) => t.type.toString()).join(", ") + ">";
+
+    this.print_fn(
+      "Adding closure to scope with type ",
+      parameter_type + " -> " + return_type,
+    );
+
+    // Build function type
+    const type = new TypeAnnotation(
+      value_to_type("function"),
+      parameter_type + " -> " + return_type,
+    );
+    this.scope.push(new Map());
+
+    // Register parameters in current scope
+    const parameter_names: string[] = [];
+    ctx
+      .closure_parameter_list()
+      ?.parameters()
+      ?.parameter()
+      .forEach((param) => {
+        const name = param.IDENTIFIER().text;
+        parameter_names.push(name);
+      });
+    for (let i = 0; i < parameter_names.length; i++) {
+      add_to_scope(this.scope, parameter_names[i], parameter_types[i]);
+    }
+    this.scope.push(new Map());
+
+    // Check function body
+    const curr_block_results = this.block_results.length;
+    const body_results = this.visit(ctx.function_body());
+    if (!body_results.ok) {
+      return body_results;
+    }
+    this.scope.pop();
+
+    // Inspect block results
+    const final_block = this.block_results[this.block_results.length - 1];
+    const intermediate_blocks = this.block_results.slice(0, -1);
+
+    // Check return types of intermediate blocks
+    let intermediate_return_type = TypeTag.unknown;
+    for (const block of intermediate_blocks) {
+      if (
+        block.return_type.type !== TypeTag.empty &&
+        !is_promotable(block.return_type.type, value_to_type(return_type))
+      ) {
+        return {
+          ok: false,
+          error: new Error(
+            `Line ${ctx.start.line}: all return types in block must be the same but got ${block.return_type} and ${return_type}`,
+          ),
+        };
+      }
+
+      intermediate_return_type =
+        intermediate_return_type === TypeTag.unknown
+          ? block.return_type.type
+          : intermediate_return_type;
+    }
+
+    if (
+      final_block.block_type.type === TypeTag.empty &&
+      final_block.return_type.type === TypeTag.empty
+    ) {
+      this.print_fn(
+        "No final expression and no return statement -> Either closure declared to return empty type or all blocks return empty type",
+      );
+      return return_type === TypeTag.empty
+        ? {
+            ok: true,
+            value: type,
+          }
+        : is_promotable(intermediate_return_type, value_to_type(return_type))
+          ? {
+              ok: true,
+              value: type,
+            }
+          : {
+              ok: false,
+              error: new Error(
+                `Line ${ctx.start.line}: closure expects return type ${return_type} but got empty type`,
+              ),
+            };
+    } else if (
+      final_block.block_type.type === TypeTag.empty &&
+      final_block.return_type.type !== TypeTag.empty
+    ) {
+      this.print_fn("No final expression but return statement is present ");
+      return is_promotable(
+        final_block.return_type.type,
+        value_to_type(return_type),
+      )
+        ? {
+            ok: true,
+            value: type,
+          }
+        : {
+            ok: false,
+            error: new Error(
+              `Line ${ctx.start.line}: closure expects return type ${return_type} but got ${final_block.return_type.type}`,
+            ),
+          };
+    } else if (
+      final_block.block_type.type !== TypeTag.empty &&
+      final_block.return_type.type === TypeTag.empty
+    ) {
+      this.print_fn("Final expression but no return statement");
+      return return_type === final_block.block_type.type
+        ? {
+            ok: true,
+            value: type,
+          }
+        : {
+            ok: false,
+            error: new Error(
+              `Line ${ctx.start.line}: closure expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+            ),
+          };
+    } else {
+      // Both final expression and return statement are present
+      this.print_fn("Both final expression and return statement are present");
+      if (
+        !is_promotable(final_block.return_type.type, value_to_type(return_type))
+      ) {
+        return {
+          ok: false,
+          error: new Error(
+            `Line ${ctx.start.line}: closure expects return type ${return_type} but got ${final_block.return_type.type}`,
+          ),
+        };
+      }
+
+      if (
+        !is_promotable(final_block.block_type.type, value_to_type(return_type))
+      ) {
+        return {
+          ok: false,
+          error: new Error(
+            `Line ${ctx.start.line}: closure expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+          ),
+        };
+      }
+    }
+
+    return {
+      ok: false,
+      error: new Error(`Line ${ctx.start.line}: closure has an unknown error`),
     };
   }
 
