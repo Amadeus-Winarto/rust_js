@@ -28,6 +28,13 @@ import {
 import { print, add_to_scope, get_type, Result } from "../utils";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 
+class TypeError extends Error {
+  constructor(message: string, line_number: number) {
+    super(`Line ${line_number}: ${message}`);
+    this.name = "TypeError";
+  }
+}
+
 const get_unary_type_checker = (operator: string) => {
   switch (operator) {
     case "!":
@@ -136,8 +143,9 @@ class TypeProducer
 
     return {
       ok: false,
-      error: new Error(
-        `Line ${ctx.start.line}: unknown statement type ${ctx.text}`,
+      error: new TypeError(
+        `unknown statement type ${ctx.text}`,
+        ctx.start.line,
       ),
     };
   }
@@ -164,8 +172,9 @@ class TypeProducer
     if (return_types === undefined) {
       return {
         ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: CompilerError: return types is undefined. This is a bug in the TypeValidator!`,
+        error: new TypeError(
+          `return types is undefined. This is a bug in the TypeValidator!`,
+          ctx.start.line,
         ),
       };
     }
@@ -176,8 +185,9 @@ class TypeProducer
         this.print_fn("Failed return types: ", return_types);
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: all return types in block must be the same but got ${return_types}`,
+          error: new TypeError(
+            `all return types in block must be the same but got ${return_types}`,
+            ctx.start.line,
           ),
         };
       }
@@ -221,8 +231,9 @@ class TypeProducer
     if (!is_promotable(expression_type.value.type, type.type)) {
       return {
         ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: constant '${name}' declared with type ${type.type} but got ${expression_type.value.type}`,
+        error: new TypeError(
+          `constant '${name}' declared with type ${type.type} but got ${expression_type.value.type}`,
+          ctx.start.line,
         ),
       };
     }
@@ -243,8 +254,9 @@ class TypeProducer
     if (!is_promotable(expression_type.value.type, type.type)) {
       return {
         ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: constant '${name}' declared with type ${type.type} but got ${expression_type.value.type}`,
+        error: new TypeError(
+          `constant '${name}' declared with type ${type.type} but got ${expression_type.value.type}`,
+          ctx.start.line,
         ),
       };
     }
@@ -322,8 +334,9 @@ class TypeProducer
       ) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: all return types in block must be the same but got ${block.return_type} and ${return_type}`,
+          error: new TypeError(
+            `all return types in block must be the same but got ${block.return_type} and ${return_type}`,
+            ctx.start.line,
           ),
         };
       }
@@ -353,8 +366,9 @@ class TypeProducer
             }
           : {
               ok: false,
-              error: new Error(
-                `Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got empty type`,
+              error: new TypeError(
+                `function '${name}' expects return type ${return_type} but got empty type`,
+                ctx.start.line,
               ),
             };
     } else if (
@@ -372,8 +386,9 @@ class TypeProducer
           }
         : {
             ok: false,
-            error: new Error(
-              `Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got ${final_block.return_type.type}`,
+            error: new TypeError(
+              `function '${name}' expects return type ${return_type} but got ${final_block.return_type.type}`,
+              ctx.start.line,
             ),
           };
     } else if (
@@ -388,8 +403,9 @@ class TypeProducer
           }
         : {
             ok: false,
-            error: new Error(
-              `Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+            error: new TypeError(
+              `function '${name}' expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+              ctx.start.line,
             ),
           };
     } else {
@@ -400,8 +416,9 @@ class TypeProducer
       ) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got ${final_block.return_type.type}`,
+          error: new TypeError(
+            `function '${name}' expects return type ${return_type} but got ${final_block.return_type.type}`,
+            ctx.start.line,
           ),
         };
       }
@@ -411,8 +428,9 @@ class TypeProducer
       ) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: function '${name}' expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+          error: new TypeError(
+            `function '${name}' expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+            ctx.start.line,
           ),
         };
       }
@@ -420,8 +438,9 @@ class TypeProducer
 
     return {
       ok: false,
-      error: new Error(
-        `Line ${ctx.start.line}: function '${name}' has an unknown error`,
+      error: new TypeError(
+        `function '${name}' has an unknown error`,
+        ctx.start.line,
       ),
     };
   }
@@ -468,8 +487,9 @@ class TypeProducer
                 }
               : {
                   ok: false,
-                  error: new Error(
-                    `Line ${ctx.start.line}: ${literal_ctx.text} is not a valid literal`,
+                  error: new TypeError(
+                    `${literal_ctx.text} is not a valid literal`,
+                    ctx.start.line,
                   ),
                 };
     }
@@ -484,8 +504,9 @@ class TypeProducer
       if (maybe_type === undefined) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${line_number}: name '${name}' not declared in this scope`,
+          error: new TypeError(
+            `name '${name}' not declared in this scope`,
+            line_number,
           ),
         };
       }
@@ -532,8 +553,9 @@ class TypeProducer
           if (left_type !== right_type) {
             return {
               ok: false,
-              error: new Error(
-                `Line ${ctx.start.line}: type mismatch: operator ${binop_ctx.text} does not support types ${left_type} and ${right_type}`,
+              error: new TypeError(
+                `type mismatch: operator ${binop_ctx.text} does not support types ${left_type} and ${right_type}`,
+                ctx.start.line,
               ),
             };
           }
@@ -574,8 +596,9 @@ class TypeProducer
           if (left_type !== right_type) {
             return {
               ok: false,
-              error: new Error(
-                `Line ${ctx.start.line}: type mismatch: operator ${binop_ctx.text} does not support types ${left_type} and ${right_type}`,
+              error: new TypeError(
+                `type mismatch: operator ${binop_ctx.text} does not support types ${left_type} and ${right_type}`,
+                ctx.start.line,
               ),
             };
           }
@@ -606,8 +629,9 @@ class TypeProducer
 
       return {
         ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: type mismatch: operator ${binop_ctx.text} does not support types ${left_type} and ${right_type}`,
+        error: new TypeError(
+          `type mismatch: operator ${binop_ctx.text} does not support types ${left_type} and ${right_type}`,
+          ctx.start.line,
         ),
       };
     }
@@ -631,8 +655,9 @@ class TypeProducer
       if (!is_bool(left_type) || !is_bool(right_type)) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: type mismatch: operator ${logic_ctx.text} expects boolean types but got ${left_type} and ${right_type}`,
+          error: new TypeError(
+            `type mismatch: operator ${logic_ctx.text} expects boolean types but got ${left_type} and ${right_type}`,
+            ctx.start.line,
           ),
         };
       }
@@ -659,8 +684,9 @@ class TypeProducer
           }
         : {
             ok: false,
-            error: new Error(
-              `Line ${ctx.start.line}: type mismatch: operator ${unary_ctx.text} expects boolean type but got ${expr.value.type}`,
+            error: new TypeError(
+              `type mismatch: operator ${unary_ctx.text} expects boolean type but got ${expr.value.type}`,
+              ctx.start.line,
             ),
           };
     }
@@ -674,8 +700,9 @@ class TypeProducer
       if (maybe_type === undefined) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: function '${function_name}' not declared in this scope. This is a SyntaxError!`,
+          error: new TypeError(
+            `function '${function_name}' not declared in this scope. This is a SyntaxError!`,
+            ctx.start.line,
           ),
         };
       }
@@ -684,8 +711,9 @@ class TypeProducer
       if (maybe_type.value === undefined) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: function '${function_name}' has no type. This is a TypeValidator bug!`,
+          error: new TypeError(
+            `function '${function_name}' has no type. This is a TypeValidator bug!`,
+            ctx.start.line,
           ),
         };
       }
@@ -726,8 +754,9 @@ class TypeProducer
       if (parameter_types.length !== arg_types.length) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: function '${function_name}' expects ${parameter_types.length} arguments but got ${arg_types.length}`,
+          error: new TypeError(
+            `function '${function_name}' expects ${parameter_types.length} arguments but got ${arg_types.length}`,
+            ctx.start.line,
           ),
         };
       }
@@ -739,8 +768,9 @@ class TypeProducer
         ) {
           return {
             ok: false,
-            error: new Error(
-              `Line ${ctx.start.line}: type mismatch: function '${function_name}' expects type ${parameter_types[i]} but got ${arg_types[i]}`,
+            error: new TypeError(
+              `type mismatch: function '${function_name}' expects type ${parameter_types[i]} but got ${arg_types[i]}`,
+              ctx.start.line,
             ),
           };
         }
@@ -776,7 +806,7 @@ class TypeProducer
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
-      error: new Error(`Line ${ctx.start.line}: unknown expression type`),
+      error: new TypeError(`unknown expression type`, ctx.start.line),
     };
   }
 
@@ -847,8 +877,9 @@ class TypeProducer
       ) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: all return types in block must be the same but got ${block.return_type} and ${return_type}`,
+          error: new TypeError(
+            `all return types in block must be the same but got ${block.return_type} and ${return_type}`,
+            ctx.start.line,
           ),
         };
       }
@@ -878,8 +909,9 @@ class TypeProducer
             }
           : {
               ok: false,
-              error: new Error(
-                `Line ${ctx.start.line}: closure expects return type ${return_type} but got empty type`,
+              error: new TypeError(
+                `closure expects return type ${return_type} but got empty type`,
+                ctx.start.line,
               ),
             };
     } else if (
@@ -897,8 +929,9 @@ class TypeProducer
           }
         : {
             ok: false,
-            error: new Error(
-              `Line ${ctx.start.line}: closure expects return type ${return_type} but got ${final_block.return_type.type}`,
+            error: new TypeError(
+              `closure expects return type ${return_type} but got ${final_block.return_type.type}`,
+              ctx.start.line,
             ),
           };
     } else if (
@@ -913,8 +946,9 @@ class TypeProducer
           }
         : {
             ok: false,
-            error: new Error(
-              `Line ${ctx.start.line}: closure expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+            error: new TypeError(
+              `closure expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+              ctx.start.line,
             ),
           };
     } else {
@@ -925,8 +959,9 @@ class TypeProducer
       ) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: closure expects return type ${return_type} but got ${final_block.return_type.type}`,
+          error: new TypeError(
+            `closure expects return type ${return_type} but got ${final_block.return_type.type}`,
+            ctx.start.line,
           ),
         };
       }
@@ -936,8 +971,9 @@ class TypeProducer
       ) {
         return {
           ok: false,
-          error: new Error(
-            `Line ${ctx.start.line}: closure expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+          error: new TypeError(
+            `closure expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+            ctx.start.line,
           ),
         };
       }
@@ -945,6 +981,9 @@ class TypeProducer
 
     return {
       ok: false,
+      error: new TypeError(`closure has an unknown error`, ctx.start.line),
+    };
+  }
       error: new Error(`Line ${ctx.start.line}: closure has an unknown error`),
     };
   }
@@ -958,8 +997,9 @@ class TypeProducer
     if (!is_bool(result.value.type)) {
       return {
         ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: condition expression must be of type bool but got ${result.value.type}`,
+        error: new TypeError(
+          `condition expression must be of type bool but got ${result.value.type}`,
+          ctx.start.line,
         ),
       };
     }
@@ -977,8 +1017,9 @@ class TypeProducer
     if (!is_bool(condition_type.value.type)) {
       return {
         ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: condition expression must be of type bool but got ${condition_type.value.type}`,
+        error: new TypeError(
+          `condition expression must be of type bool but got ${condition_type.value.type}`,
+          ctx.start.line,
         ),
       };
     }
@@ -1004,8 +1045,9 @@ class TypeProducer
     if (!then_block_type.value.equals(else_block_type.value)) {
       return {
         ok: false,
-        error: new Error(
-          `Line ${ctx.start.line}: if/else blocks must have the same type but got ${then_block_type.value} and ${else_block_type.value}`,
+        error: new TypeError(
+          `if/else blocks must have the same type but got ${then_block_type.value} and ${else_block_type.value}`,
+          ctx.start.line,
         ),
       };
     }
