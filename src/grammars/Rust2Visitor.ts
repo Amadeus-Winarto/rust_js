@@ -10,6 +10,7 @@ import { Variable_declarationContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
+import { AssignmentContext } from "./Rust2Parser";
 import { ClosureContext } from "./Rust2Parser";
 import { Closure_parameter_listContext } from "./Rust2Parser";
 import { Parens_expressionContext } from "./Rust2Parser";
@@ -103,6 +104,13 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitExpression?: (ctx: ExpressionContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.assignment`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitAssignment?: (ctx: AssignmentContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.closure`.

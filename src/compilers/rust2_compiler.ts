@@ -32,6 +32,7 @@ import {
   NameContext,
   Binary_operatorContext,
   ClosureContext,
+  AssignmentContext,
 } from "../grammars/Rust2Parser";
 import { Rust2CompileTimeEvaluator } from "./rust2_compile_time_evaluator";
 import OpCodes from "./opcodes";
@@ -582,12 +583,64 @@ class Rust2InstructionCompiler
       return this.visitClosure(closure_ctx);
     }
 
+    // Case 11: assignment
+    const assignment_ctx = ctx.assignment();
+    if (assignment_ctx !== undefined) {
+      return this.visitAssignment(assignment_ctx);
+    }
+
     return {
       ok: false,
       error: new CompilerError(
         ctx.start.line,
         "Not implemented: Unknown Case Expression",
       ),
+    };
+  }
+
+  visitAssignment(ctx: AssignmentContext): InstructionCompilerOutput {
+    this.print_fn("Visiting assignment");
+    const name = ctx.name().text;
+
+    // Compile the expression
+    const maybe_compiled_expression = this.visit(ctx.expression());
+    if (!maybe_compiled_expression.ok) {
+      return maybe_compiled_expression;
+    }
+    const compiled_expression = maybe_compiled_expression.value;
+
+    // Add the opcode to the compiled expression
+    const maybe_lookup_success = name_recursive_lookup(this.environments, name);
+    if (maybe_lookup_success === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          `Unknown variable ${name}. This is a ValidatorError!`,
+        ),
+      };
+    }
+
+    const [env_index, index] = maybe_lookup_success;
+    const parent_index = this.environments.length - 1 - env_index;
+
+    compiled_expression.instructions.push(
+      parent_index === 0
+        ? { opcode: OpCodes.STLG, operands: [index] }
+        : { opcode: OpCodes.STPG, operands: [index, parent_index] },
+    );
+
+    compiled_expression.instructions.push({
+      opcode: OpCodes.LGCU,
+      operands: [],
+    }); // Result of evaluating an assignment is `undefined`
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: compiled_expression.max_stack_size,
+        instructions: compiled_expression.instructions,
+      },
     };
   }
 

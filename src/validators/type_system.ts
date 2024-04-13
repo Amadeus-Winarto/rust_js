@@ -1,4 +1,5 @@
 import {
+  AssignmentContext,
   BlockContext,
   ClosureContext,
   Cond_exprContext,
@@ -803,6 +804,12 @@ class TypeProducer
       return result;
     }
 
+    // Case 11: assignment
+    const assignment_ctx = ctx.assignment();
+    if (assignment_ctx !== undefined) {
+      return this.visitAssignment(assignment_ctx);
+    }
+
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
@@ -984,7 +991,38 @@ class TypeProducer
       error: new TypeError(`closure has an unknown error`, ctx.start.line),
     };
   }
-      error: new Error(`Line ${ctx.start.line}: closure has an unknown error`),
+
+  visitAssignment(ctx: AssignmentContext): Result<TypeAnnotation> {
+    const name = ctx.name().text;
+    const type = get_type(this.scope, name);
+    if (type === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `variable '${name}' not declared in this scope`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    const expr = this.visit(ctx.expression());
+    if (!expr.ok) {
+      return expr;
+    }
+
+    if (!is_promotable(expr.value.type, type.type)) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `variable '${name}' declared with type ${type.type} but got ${expr.value.type}`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value: type,
     };
   }
 

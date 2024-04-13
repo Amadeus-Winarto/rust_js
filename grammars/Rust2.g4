@@ -11,7 +11,7 @@ statement:
 constant_declaration:
 	'const' const_name ':' type '=' expression ';';
 variable_declaration:
-	'let' var_name ':' type '=' expression ';';
+	'let' ('mut')? var_name ':' type '=' expression ';';
 function_declaration:
 	'fn' function_name parameter_list '->' type function_body;
 return_expression: 'return' expression;
@@ -19,6 +19,7 @@ expression:
 	literal
 	| name
 	| block
+	| assignment
 	| closure
 	| expression binary_operator expression
 	| expression binary_logical_operator expression
@@ -26,6 +27,8 @@ expression:
 	| function_application
 	| parens_expression
 	| if_expression;
+
+assignment: name '=' expression;
 
 closure: closure_parameter_list '->' type function_body;
 closure_parameter_list: '||' | '|' parameters '|';
