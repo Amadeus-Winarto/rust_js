@@ -77,7 +77,7 @@ string_literal: '"' (string_characters)* '"';
 string_characters: ~( '"' | '\\');
 
 type: 'i32' | 'f32' | 'bool' | 'char' | '()' | custom_type;
-custom_type: IDENTIFIER;
+custom_type: IDENTIFIER | '&' IDENTIFIER;
 
 print_macro: 'println!';
 name: const_name | var_name | function_name | print_macro;

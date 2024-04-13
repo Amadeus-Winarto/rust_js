@@ -51,7 +51,7 @@ export function value_to_type(value: string): TypeTag {
   if (value === "bool") {
     return TypeTag.bool;
   }
-  if (value === "string") {
+  if (value === "&str") {
     return TypeTag.string;
   }
   if (value === "function") {
