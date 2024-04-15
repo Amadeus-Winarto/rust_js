@@ -18,7 +18,7 @@ Notes:
 
 - In `Rust1`, the type of a variable must be declared explicitly. This differs from `Rust` where the type can be inferred.
 - In `Rust1` and `Rust`, the value of a variable is immutable by default. This means that the value of a variable cannot be changed after it has been assigned.
-- In `Rust1` and in `Rust`, the visibility of a variable is limited to the block in which it is declared. This means that the variable is not accessible outside of the block in which it is declared. This follows *lexical scoping* rules.
+- In `Rust1` and in `Rust`, the visibility of a variable is limited to the block in which it is declared. This means that the variable is not accessible outside of the block in which it is declared. This follows _lexical scoping_ rules.
 
 ## Constant declarations
 
@@ -34,7 +34,7 @@ Notes:
 
 - In `Rust1`, the type of a constant must be declared explicitly. This differs from `Rust` where the type can be inferred.
 - In `Rust1` and `Rust`, the value of a constant is immutable by default. This means that the value of a constant cannot be changed after it has been assigned.
-- In `Rust1` and in `Rust`, the visibility of a constant is limited to the block in which it is declared. This means that the constant is not accessible outside of the block in which it is declared. This follows *lexical scoping* rules.
+- In `Rust1` and in `Rust`, the visibility of a constant is limited to the block in which it is declared. This means that the constant is not accessible outside of the block in which it is declared. This follows _lexical scoping_ rules.
 
 ## If/Else Expressions
 
@@ -65,7 +65,7 @@ There is no distinction between conditional expressions and conditional statemen
 
 fn fact(x: i32) -> i32 {
     if (x == 0) {
-        return 1; 
+        return 1;
     } else {
         return x * fact(x-1);
     }
