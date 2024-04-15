@@ -21,8 +21,8 @@ export function in_scope_untyped_recursive(
   scope: Scope[],
   name: string,
 ): boolean {
-  for (const s of scope) {
-    if (s.has(name)) {
+  for (let i = scope.length - 1; i >= 0; i--) {
+    if (scope[i].has(name)) {
       return true;
     }
   }
@@ -33,9 +33,9 @@ export function get_type(
   scope: Scope[],
   name: string,
 ): TypeAnnotation | undefined {
-  for (const s of scope) {
-    if (s.has(name)) {
-      return s.get(name);
+  for (let i = scope.length - 1; i >= 0; i--) {
+    if (scope[i].has(name)) {
+      return scope[i].get(name);
     }
   }
   return undefined;
