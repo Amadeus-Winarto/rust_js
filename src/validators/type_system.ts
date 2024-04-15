@@ -287,6 +287,20 @@ class TypeProducer
         const type = new TypeAnnotation(value_to_type(param.type().text));
         parameter_types.push(type);
       });
+
+    for (const param of parameter_types) {
+      if (param.type === TypeTag.unknown) {
+        this.print_fn("Unknown type in function ", name);
+        return {
+          ok: false,
+          error: new TypeError(
+            `unknown type in function '${name}'`,
+            ctx.start.line,
+          ),
+        };
+      }
+    }
+
     const parameter_type =
       "<" + parameter_types.map((t) => t.type.toString()).join(", ") + ">";
 
