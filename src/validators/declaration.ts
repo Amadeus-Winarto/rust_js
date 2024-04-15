@@ -7,7 +7,7 @@ import {
   Parameter_listContext,
   ProgramContext,
   Variable_declarationContext,
-} from "../grammars/Rust1Parser";
+} from "../grammars/Rust2Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import {
   Validator,
