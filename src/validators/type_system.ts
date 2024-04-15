@@ -680,14 +680,24 @@ class TypeProducer
       }
 
       // Get arguments
+      if (maybe_type.type !== TypeTag.function) {
+        return {
+          ok: false,
+          error: new Error(
+            `Line ${ctx.start.line}: call expression to '${function_name}' requires function type but got ${maybe_type.type}`,
+          ),
+        };
+      }
+
       if (maybe_type.value === undefined) {
         return {
           ok: false,
           error: new Error(
-            `Line ${ctx.start.line}: function '${function_name}' has no type. This is a TypeValidator bug!`,
+            `Line ${ctx.start.line}: function '${function_name}' does not have a type. This is a bug in the TypeValidator!`,
           ),
         };
       }
+
       const function_type_string = maybe_type.value;
       const parameter_type_string = function_type_string
         .split("->")[0]
