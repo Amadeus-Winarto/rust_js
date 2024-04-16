@@ -7,6 +7,7 @@ import { Program_elementContext } from "./Rust2Parser";
 import { StatementContext } from "./Rust2Parser";
 import { Constant_declarationContext } from "./Rust2Parser";
 import { Variable_declarationContext } from "./Rust2Parser";
+import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
@@ -100,6 +101,17 @@ export interface Rust2Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitVariable_declaration?: (ctx: Variable_declarationContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.mutable`.
+   * @param ctx the parse tree
+   */
+  enterMutable?: (ctx: MutableContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.mutable`.
+   * @param ctx the parse tree
+   */
+  exitMutable?: (ctx: MutableContext) => void;
 
   /**
    * Enter a parse tree produced by `Rust2Parser.function_declaration`.

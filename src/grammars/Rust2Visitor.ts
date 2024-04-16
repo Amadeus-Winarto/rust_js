@@ -7,6 +7,7 @@ import { Program_elementContext } from "./Rust2Parser";
 import { StatementContext } from "./Rust2Parser";
 import { Constant_declarationContext } from "./Rust2Parser";
 import { Variable_declarationContext } from "./Rust2Parser";
+import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
@@ -83,6 +84,13 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitVariable_declaration?: (ctx: Variable_declarationContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.mutable`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitMutable?: (ctx: MutableContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.function_declaration`.

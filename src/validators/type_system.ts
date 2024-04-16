@@ -246,7 +246,8 @@ class TypeProducer
     ctx: Variable_declarationContext,
   ): Result<TypeAnnotation> {
     const name = ctx.var_name().text;
-    const type = new TypeAnnotation(value_to_type(ctx.type().text));
+    const is_mutable = ctx.mutable().text !== "";
+    const type = new TypeAnnotation(value_to_type(ctx.type().text), is_mutable);
     const expression_type = this.visit(ctx.expression());
     if (!expression_type.ok) {
       return expression_type;
@@ -1024,6 +1025,16 @@ class TypeProducer
         ok: false,
         error: new TypeError(
           `variable '${name}' not declared in this scope`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    if (!type.is_mutable) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `cannot assign to immutable variable ${name} with type ${type}`,
           ctx.start.line,
         ),
       };

@@ -21,6 +21,7 @@ export enum TypeTag {
 export class TypeAnnotation {
   constructor(
     public type: TypeTag,
+    public is_mutable: boolean = false,
     public value: string | undefined = undefined,
   ) {}
 
