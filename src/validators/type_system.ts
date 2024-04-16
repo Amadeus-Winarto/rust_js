@@ -247,7 +247,11 @@ class TypeProducer
   ): Result<TypeAnnotation> {
     const name = ctx.var_name().text;
     const is_mutable = ctx.mutable().text !== "";
-    const type = new TypeAnnotation(value_to_type(ctx.type().text), is_mutable);
+    const type = new TypeAnnotation(
+      value_to_type(ctx.type().text),
+      undefined,
+      is_mutable,
+    );
     const expression_type = this.visit(ctx.expression());
     if (!expression_type.ok) {
       return expression_type;

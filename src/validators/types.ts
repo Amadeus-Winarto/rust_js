@@ -21,13 +21,17 @@ export enum TypeTag {
 export class TypeAnnotation {
   constructor(
     public type: TypeTag,
-    public is_mutable: boolean = false,
     public value: string | undefined = undefined,
+    public is_mutable: boolean = false,
   ) {}
 
   // Equality check
   equals(other: TypeAnnotation): boolean {
-    return this.type === other.type && this.value === other.value;
+    return (
+      this.type === other.type &&
+      this.value === other.value &&
+      this.is_mutable === other.is_mutable
+    );
   }
 
   // String representation
