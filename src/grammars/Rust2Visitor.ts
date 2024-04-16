@@ -35,7 +35,6 @@ import { Boolean_literalContext } from "./Rust2Parser";
 import { String_literalContext } from "./Rust2Parser";
 import { String_charactersContext } from "./Rust2Parser";
 import { TypeContext } from "./Rust2Parser";
-import { Custom_typeContext } from "./Rust2Parser";
 import { Print_macroContext } from "./Rust2Parser";
 import { NameContext } from "./Rust2Parser";
 import { Const_nameContext } from "./Rust2Parser";
@@ -282,13 +281,6 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitType?: (ctx: TypeContext) => Result;
-
-  /**
-   * Visit a parse tree produced by `Rust2Parser.custom_type`.
-   * @param ctx the parse tree
-   * @return the visitor result
-   */
-  visitCustom_type?: (ctx: Custom_typeContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.print_macro`.
