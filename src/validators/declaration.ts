@@ -15,7 +15,7 @@ import {
   printScopes,
   TypeAnnotation,
   value_to_type,
-  TypeTag,
+  PrimitiveTypeTag,
 } from "./types";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import {
@@ -69,7 +69,7 @@ class DeclarationRuleValidator
     add_to_scope(
       this.scope,
       "println!",
-      new TypeAnnotation(TypeTag.function, "<...> -> ()"),
+      new TypeAnnotation(PrimitiveTypeTag.function, "<...> -> ()"),
     );
     return this.visitChildren(ctx);
   }

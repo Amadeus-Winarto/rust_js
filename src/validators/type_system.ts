@@ -14,11 +14,12 @@ import {
   Variable_declarationContext,
 } from "../grammars/Rust2Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
+import type { TypeTag } from "./types";
 import {
   Validator,
   Scope,
   TypeAnnotation,
-  TypeTag,
+  PrimitiveTypeTag,
   value_to_type,
   is_integer,
   is_float,
@@ -69,7 +70,7 @@ class TypeProducer
   defaultResult(): Result<TypeAnnotation> {
     return {
       ok: true,
-      value: new TypeAnnotation(TypeTag.unknown),
+      value: new TypeAnnotation(PrimitiveTypeTag.unknown),
     };
   }
 
@@ -97,7 +98,7 @@ class TypeProducer
     add_to_scope(
       this.scope,
       "println!",
-      new TypeAnnotation(TypeTag.function, "<...> -> ()"),
+      new TypeAnnotation(PrimitiveTypeTag.function, "<...> -> ()"),
     );
     return this.visitChildren(ctx);
   }
@@ -117,7 +118,7 @@ class TypeProducer
 
     return {
       ok: true,
-      value: new TypeAnnotation(TypeTag.empty, ""),
+      value: new TypeAnnotation(PrimitiveTypeTag.empty, ""),
     };
   }
 
@@ -198,7 +199,7 @@ class TypeProducer
     const maybe_expr = ctx.expression();
     const empty_type: Result<TypeAnnotation> = {
       ok: true,
-      value: new TypeAnnotation(TypeTag.empty),
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
     };
     const curr_block_type: Result<TypeAnnotation> =
       maybe_expr === undefined ? empty_type : this.visit(maybe_expr);
@@ -214,7 +215,7 @@ class TypeProducer
       return_type:
         return_types.length > 0
           ? return_types[0]
-          : new TypeAnnotation(TypeTag.empty, ""),
+          : new TypeAnnotation(PrimitiveTypeTag.empty, ""),
     });
     return curr_block_type;
   }
@@ -239,7 +240,10 @@ class TypeProducer
       };
     }
     add_to_scope(this.scope, name, type);
-    return this.visitChildren(ctx);
+    return {
+      ok: true,
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
+    };
   }
 
   visitVariable_declaration(
@@ -267,7 +271,10 @@ class TypeProducer
       };
     }
     add_to_scope(this.scope, name, type);
-    return this.visitChildren(ctx);
+    return {
+      ok: true,
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
+    };
   }
 
   visitFunction_declaration(
@@ -294,7 +301,7 @@ class TypeProducer
       });
 
     for (const param of parameter_types) {
-      if (param.type === TypeTag.unknown) {
+      if (param.type === PrimitiveTypeTag.unknown) {
         this.print_fn("Unknown type in function ", name);
         return {
           ok: false,
@@ -346,10 +353,10 @@ class TypeProducer
     const intermediate_blocks = this.block_results.slice(0, -1);
 
     // Check return types of intermediate blocks
-    let intermediate_return_type = TypeTag.unknown;
+    let intermediate_return_type: TypeTag = PrimitiveTypeTag.unknown;
     for (const block of intermediate_blocks) {
       if (
-        block.return_type.type !== TypeTag.empty &&
+        block.return_type.type !== PrimitiveTypeTag.empty &&
         !is_promotable(block.return_type.type, value_to_type(return_type))
       ) {
         return {
@@ -362,19 +369,19 @@ class TypeProducer
       }
 
       intermediate_return_type =
-        intermediate_return_type === TypeTag.unknown
+        intermediate_return_type === PrimitiveTypeTag.unknown
           ? block.return_type.type
           : intermediate_return_type;
     }
 
     if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn(
         "No final expression and no return statement -> Either function declared to return empty type or all blocks return empty type",
       );
-      return return_type === TypeTag.empty
+      return return_type === PrimitiveTypeTag.empty
         ? {
             ok: true,
             value: type,
@@ -392,8 +399,8 @@ class TypeProducer
               ),
             };
     } else if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type !== TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type !== PrimitiveTypeTag.empty
     ) {
       this.print_fn("No final expression but return statement is present ");
       return is_promotable(
@@ -412,8 +419,8 @@ class TypeProducer
             ),
           };
     } else if (
-      final_block.block_type.type !== TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type !== PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn("Final expression but no return statement");
       return return_type === final_block.block_type.type
@@ -488,22 +495,22 @@ class TypeProducer
       return literal_ctx.boolean_literal()
         ? {
             ok: true,
-            value: new TypeAnnotation(TypeTag.bool),
+            value: new TypeAnnotation(PrimitiveTypeTag.bool),
           }
         : literal_ctx.float_literal()
           ? {
               ok: true,
-              value: new TypeAnnotation(TypeTag.float_literal),
+              value: new TypeAnnotation(PrimitiveTypeTag.float_literal),
             }
           : literal_ctx.integer_literal()
             ? {
                 ok: true,
-                value: new TypeAnnotation(TypeTag.integer_literal),
+                value: new TypeAnnotation(PrimitiveTypeTag.integer_literal),
               }
             : literal_ctx.string_literal()
               ? {
                   ok: true,
-                  value: new TypeAnnotation(TypeTag.string),
+                  value: new TypeAnnotation(PrimitiveTypeTag.string),
                 }
               : {
                   ok: false,
@@ -562,9 +569,9 @@ class TypeProducer
 
       if (is_integer(left_type) && is_integer(right_type)) {
         const has_lazy_type =
-          left_type === TypeTag.integer_literal
+          left_type === PrimitiveTypeTag.integer_literal
             ? left
-            : right_type === TypeTag.integer_literal
+            : right_type === PrimitiveTypeTag.integer_literal
               ? right
               : undefined;
 
@@ -581,7 +588,7 @@ class TypeProducer
           }
 
           const result_type = is_comparison_operator(binop_ctx.text)
-            ? new TypeAnnotation(TypeTag.bool)
+            ? new TypeAnnotation(PrimitiveTypeTag.bool)
             : new TypeAnnotation(left_type);
           return {
             ok: true,
@@ -590,25 +597,25 @@ class TypeProducer
         } else {
           // Lazily-evaluated type --> the other type must be the same as the non-lazily-evaluated type
 
-          return left_type === TypeTag.integer_literal
+          return left_type === PrimitiveTypeTag.integer_literal
             ? {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(right_type),
               }
             : {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(left_type),
               };
         }
       } else if (is_float(left_type) && is_float(right_type)) {
         const has_lazy_type =
-          left_type === TypeTag.float_literal
+          left_type === PrimitiveTypeTag.float_literal
             ? left
-            : right_type === TypeTag.float_literal
+            : right_type === PrimitiveTypeTag.float_literal
               ? right
               : undefined;
 
@@ -624,24 +631,24 @@ class TypeProducer
           }
 
           const result_type = is_comparison_operator(binop_ctx.text)
-            ? new TypeAnnotation(TypeTag.bool)
+            ? new TypeAnnotation(PrimitiveTypeTag.bool)
             : new TypeAnnotation(left_type);
           return {
             ok: true,
             value: result_type,
           };
         } else {
-          return left_type === TypeTag.float_literal
+          return left_type === PrimitiveTypeTag.float_literal
             ? {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(right_type),
               }
             : {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(left_type),
               };
         }
@@ -684,7 +691,7 @@ class TypeProducer
 
       return {
         ok: true,
-        value: new TypeAnnotation(TypeTag.bool),
+        value: new TypeAnnotation(PrimitiveTypeTag.bool),
       };
     }
 
@@ -728,7 +735,7 @@ class TypeProducer
       }
 
       // Get arguments
-      if (maybe_type.type !== TypeTag.function) {
+      if (maybe_type.type !== PrimitiveTypeTag.function) {
         return {
           ok: false,
           error: new Error(
@@ -767,11 +774,12 @@ class TypeProducer
         return maybe_error;
       }
       const arg_types = annotated_arg_types
-        .map((arg) => (arg.ok ? arg.value.type : TypeTag.unknown))
-        .filter((t) => t !== TypeTag.unknown);
+        .map((arg) => (arg.ok ? arg.value.type : PrimitiveTypeTag.unknown))
+        .filter((t) => t !== PrimitiveTypeTag.unknown);
 
       const parameter_has_unit_type =
-        parameter_types.length === 1 && parameter_types[0] === TypeTag.unit;
+        parameter_types.length === 1 &&
+        parameter_types[0] === PrimitiveTypeTag.unit;
       if (parameter_has_unit_type) {
         // Function takes in variable number of arguments of any type --> only println! macro should
         // exhibit this behaviour
@@ -905,11 +913,11 @@ class TypeProducer
     const intermediate_blocks = this.block_results.slice(0, -1);
 
     // Check return types of intermediate blocks
-    let intermediate_return_type = TypeTag.unknown;
+    let intermediate_return_type: TypeTag = PrimitiveTypeTag.unknown;
     for (const block of intermediate_blocks) {
       if (
-        block.return_type.type !== TypeTag.empty &&
-        !is_promotable(block.return_type.type, value_to_type(return_type))
+        block.return_type.type !== PrimitiveTypeTag.empty &&
+        !is_promotable(block.return_type.type, return_type)
       ) {
         return {
           ok: false,
@@ -921,24 +929,24 @@ class TypeProducer
       }
 
       intermediate_return_type =
-        intermediate_return_type === TypeTag.unknown
+        intermediate_return_type === PrimitiveTypeTag.unknown
           ? block.return_type.type
           : intermediate_return_type;
     }
 
     if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn(
         "No final expression and no return statement -> Either closure declared to return empty type or all blocks return empty type",
       );
-      return return_type === TypeTag.empty
+      return return_type === PrimitiveTypeTag.empty
         ? {
             ok: true,
             value: type,
           }
-        : is_promotable(intermediate_return_type, value_to_type(return_type))
+        : is_promotable(intermediate_return_type, return_type)
           ? {
               ok: true,
               value: type,
@@ -951,14 +959,11 @@ class TypeProducer
               ),
             };
     } else if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type !== TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type !== PrimitiveTypeTag.empty
     ) {
       this.print_fn("No final expression but return statement is present ");
-      return is_promotable(
-        final_block.return_type.type,
-        value_to_type(return_type),
-      )
+      return is_promotable(final_block.return_type.type, return_type)
         ? {
             ok: true,
             value: type,
@@ -971,8 +976,8 @@ class TypeProducer
             ),
           };
     } else if (
-      final_block.block_type.type !== TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type !== PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn("Final expression but no return statement");
       return return_type === final_block.block_type.type
@@ -990,9 +995,7 @@ class TypeProducer
     } else {
       // Both final expression and return statement are present
       this.print_fn("Both final expression and return statement are present");
-      if (
-        !is_promotable(final_block.return_type.type, value_to_type(return_type))
-      ) {
+      if (!is_promotable(final_block.return_type.type, return_type)) {
         return {
           ok: false,
           error: new TypeError(
@@ -1002,9 +1005,7 @@ class TypeProducer
         };
       }
 
-      if (
-        !is_promotable(final_block.block_type.type, value_to_type(return_type))
-      ) {
+      if (!is_promotable(final_block.block_type.type, return_type)) {
         return {
           ok: false,
           error: new TypeError(
