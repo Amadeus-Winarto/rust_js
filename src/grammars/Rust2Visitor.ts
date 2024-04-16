@@ -11,6 +11,10 @@ import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
+import { Refed_nameContext } from "./Rust2Parser";
+import { Immutable_refed_nameContext } from "./Rust2Parser";
+import { Mutable_refed_nameContext } from "./Rust2Parser";
+import { Derefed_nameContext } from "./Rust2Parser";
 import { AssignmentContext } from "./Rust2Parser";
 import { ClosureContext } from "./Rust2Parser";
 import { Closure_parameter_listContext } from "./Rust2Parser";
@@ -35,6 +39,9 @@ import { Boolean_literalContext } from "./Rust2Parser";
 import { String_literalContext } from "./Rust2Parser";
 import { String_charactersContext } from "./Rust2Parser";
 import { TypeContext } from "./Rust2Parser";
+import { Primitive_typeContext } from "./Rust2Parser";
+import { Borrowed_typeContext } from "./Rust2Parser";
+import { Borrowed_mutable_typeContext } from "./Rust2Parser";
 import { Print_macroContext } from "./Rust2Parser";
 import { NameContext } from "./Rust2Parser";
 import { Const_nameContext } from "./Rust2Parser";
@@ -111,6 +118,34 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitExpression?: (ctx: ExpressionContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.refed_name`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitRefed_name?: (ctx: Refed_nameContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.immutable_refed_name`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitImmutable_refed_name?: (ctx: Immutable_refed_nameContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.mutable_refed_name`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitMutable_refed_name?: (ctx: Mutable_refed_nameContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.derefed_name`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitDerefed_name?: (ctx: Derefed_nameContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.assignment`.
@@ -281,6 +316,27 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitType?: (ctx: TypeContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.primitive_type`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitPrimitive_type?: (ctx: Primitive_typeContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.borrowed_type`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitBorrowed_type?: (ctx: Borrowed_typeContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.borrowed_mutable_type`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitBorrowed_mutable_type?: (ctx: Borrowed_mutable_typeContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.print_macro`.

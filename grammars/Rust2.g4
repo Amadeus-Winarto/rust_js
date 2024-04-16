@@ -19,6 +19,8 @@ return_expression: 'return' expression;
 expression:
 	literal
 	| name
+	| refed_name
+	| derefed_name
 	| block
 	| assignment
 	| closure
@@ -29,7 +31,11 @@ expression:
 	| parens_expression
 	| if_expression;
 
-assignment: name '=' expression;
+refed_name: immutable_refed_name | mutable_refed_name;
+immutable_refed_name: '&' name | '&' refed_name;
+mutable_refed_name: '&mut' name | '&mut' refed_name;
+derefed_name: '*' name | '*' derefed_name;
+assignment: (name | derefed_name) '=' expression;
 
 closure: closure_parameter_list '->' type function_body;
 closure_parameter_list: '||' | '|' parameters '|';
@@ -80,7 +86,10 @@ string_literal: '"' (string_characters)* '"';
 
 string_characters: ~( '"' | '\\');
 
-type: 'i32' | 'f32' | 'bool' | '()';
+type: primitive_type | borrowed_type | borrowed_mutable_type;
+primitive_type: 'i32' | 'f32' | 'bool' | '()';
+borrowed_type: '&' primitive_type | '&' type;
+borrowed_mutable_type: '&mut' primitive_type | '&mut' type;
 
 print_macro: 'println!';
 name: const_name | var_name | function_name | print_macro;
