@@ -31,7 +31,6 @@ import { Boolean_literalContext } from "./Rust1Parser";
 import { String_literalContext } from "./Rust1Parser";
 import { String_charactersContext } from "./Rust1Parser";
 import { TypeContext } from "./Rust1Parser";
-import { Custom_typeContext } from "./Rust1Parser";
 import { Print_macroContext } from "./Rust1Parser";
 import { NameContext } from "./Rust1Parser";
 import { Const_nameContext } from "./Rust1Parser";
@@ -361,17 +360,6 @@ export interface Rust1Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitType?: (ctx: TypeContext) => void;
-
-  /**
-   * Enter a parse tree produced by `Rust1Parser.custom_type`.
-   * @param ctx the parse tree
-   */
-  enterCustom_type?: (ctx: Custom_typeContext) => void;
-  /**
-   * Exit a parse tree produced by `Rust1Parser.custom_type`.
-   * @param ctx the parse tree
-   */
-  exitCustom_type?: (ctx: Custom_typeContext) => void;
 
   /**
    * Enter a parse tree produced by `Rust1Parser.print_macro`.
