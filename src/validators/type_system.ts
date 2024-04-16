@@ -487,6 +487,27 @@ class TypeProducer
     return result;
   }
 
+  visitName(ctx: NameContext): Result<TypeAnnotation> {
+    const line_number = ctx.start.line;
+    const name = ctx.text;
+    const maybe_type = get_type(this.scope, name);
+
+    if (maybe_type === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `name '${name}' not declared in this scope`,
+          line_number,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value: maybe_type,
+    };
+  }
+
   visitExpression(ctx: ExpressionContext): Result<TypeAnnotation> {
     // Case 1: Literal
     this.print_fn("Checking expression type " + ctx.text);
@@ -524,24 +545,7 @@ class TypeProducer
     // Case 2: Name
     const name_ctx = ctx.name();
     if (name_ctx !== undefined) {
-      const line_number = name_ctx.start.line;
-      const name = name_ctx.text;
-      const maybe_type = get_type(this.scope, name);
-
-      if (maybe_type === undefined) {
-        return {
-          ok: false,
-          error: new TypeError(
-            `name '${name}' not declared in this scope`,
-            line_number,
-          ),
-        };
-      }
-
-      return {
-        ok: true,
-        value: maybe_type,
-      };
+      return this.visitName(name_ctx);
     }
 
     // Case 3: Block
