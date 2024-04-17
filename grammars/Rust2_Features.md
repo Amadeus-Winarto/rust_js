@@ -2,6 +2,16 @@
 
 Note: all the features implemented in Rust1 are also implemented in Rust2. The following describes the additional features implemented in Rust2.
 
+## Deduced Types for Variables
+
+The following is now valid in Rust2:
+
+```rust
+let x = 5;
+```
+
+Since the integer literal `5` has type `integer`, the type of `x` is deduced to be `i32` by default.
+
 ## Closures
 
 Closures are functions that can capture the enclosing environment. For example, a closure that captures the x variable:

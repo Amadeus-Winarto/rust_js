@@ -31,6 +31,8 @@ import {
   ClosureContext,
 } from "../grammars/Rust2Parser";
 
+const null_type = new TypeAnnotation(PrimitiveTypeTag.empty);
+
 class DeclarationRuleValidator
   extends AbstractParseTreeVisitor<Result<Boolean>>
   implements RustVisitor<Result<Boolean>>
@@ -85,7 +87,7 @@ class DeclarationRuleValidator
   visitConstant_declaration(ctx: Constant_declarationContext): Result<Boolean> {
     this.print_fn("Visiting constant_declaration");
     const name = ctx.const_name().text;
-    const type = new TypeAnnotation(value_to_type(ctx.type().text));
+    const type = null_type;
 
     if (in_scope_untyped(this.scope, name)) {
       this.print_fn(
@@ -110,7 +112,7 @@ class DeclarationRuleValidator
   visitVariable_declaration(ctx: Variable_declarationContext): Result<Boolean> {
     this.print_fn("Visiting variable_declaration");
     const name = ctx.var_name().text;
-    const type = new TypeAnnotation(value_to_type(ctx.type().text));
+    const type = null_type;
 
     if (in_scope_untyped(this.scope, name)) {
       this.print_fn(
@@ -135,7 +137,7 @@ class DeclarationRuleValidator
   visitFunction_declaration(ctx: Function_declarationContext): Result<Boolean> {
     this.print_fn("Visiting function_declaration");
     const name = ctx.function_name().text;
-    const type = new TypeAnnotation(value_to_type("function"));
+    const type = null_type;
 
     // Register function name in current scope
     if (in_scope_untyped(this.scope, name)) {
@@ -187,7 +189,7 @@ class DeclarationRuleValidator
       const params = maybe_params.parameter();
       for (const param of params) {
         const name = param.IDENTIFIER().text;
-        const type = new TypeAnnotation(value_to_type(param.type().text));
+        const type = null_type;
 
         if (in_scope_untyped(this.scope, name)) {
           this.print_fn(

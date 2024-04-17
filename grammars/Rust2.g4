@@ -11,7 +11,7 @@ statement:
 constant_declaration:
 	'const' const_name ':' type '=' expression ';';
 variable_declaration:
-	'let' mutable var_name ':' type '=' expression ';';
+	'let' mutable var_name (':' type)? '=' expression ';';
 mutable: ('mut')?;
 function_declaration:
 	'fn' function_name parameter_list '->' type function_body;

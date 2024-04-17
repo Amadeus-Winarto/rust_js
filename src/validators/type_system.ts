@@ -59,6 +59,15 @@ const get_unary_type_checker = (operator: string) => {
   }
 };
 
+function to_eager(type: TypeTag): TypeTag {
+  if (type === PrimitiveTypeTag.integer_literal) {
+    return PrimitiveTypeTag.i32;
+  } else if (type === PrimitiveTypeTag.float_literal) {
+    return PrimitiveTypeTag.f32;
+  }
+  return type;
+}
+
 type NameType = {
   name: NameContext;
   num_deref: number;
@@ -300,17 +309,22 @@ class TypeProducer
   visitVariable_declaration(
     ctx: Variable_declarationContext,
   ): Result<TypeAnnotation> {
-    const name = ctx.var_name().text;
-    const is_mutable = ctx.mutable().text !== "";
-    const type = new TypeAnnotation(
-      value_to_type(ctx.type().text),
-      undefined,
-      is_mutable,
-    );
     const expression_type = this.visitExpression(ctx.expression());
     if (!expression_type.ok) {
       return expression_type;
     }
+
+    const name = ctx.var_name().text;
+    const is_mutable = ctx.mutable().text !== "";
+
+    const maybe_type = ctx.type();
+    const type = new TypeAnnotation(
+      maybe_type === undefined
+        ? to_eager(expression_type.value.type)
+        : value_to_type(maybe_type.text),
+      undefined,
+      is_mutable,
+    );
 
     if (!is_promotable(expression_type.value.type, type.type)) {
       return {

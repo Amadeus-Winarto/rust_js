@@ -426,8 +426,7 @@ class Rust2InstructionCompiler
 
     // Add the opcode to the compiled expression
     const current_env = this.environments[this.environments.length - 1];
-    const type = ctx.type().text;
-    const index = current_env.push(name, type);
+    const index = current_env.push(name, "i32"); // We don't actually care about the type here
     // VM Requirement: At most 2**8 = 256 variables can be declared in a scope
     if (index >= 256) {
       this.print_fn("Error: too many variables in scope");
@@ -485,7 +484,7 @@ class Rust2InstructionCompiler
     const name = ctx.text;
     const maybe_lookup_success = name_recursive_lookup(this.environments, name);
     if (maybe_lookup_success === undefined) {
-      // Name not in environment => Shadowing doesn't happen => Name must originate
+      // Name not in environment => Name must originate
       // from compile-time context
       const maybe_index = this.static_context.lookup(name);
       if (maybe_index === undefined) {

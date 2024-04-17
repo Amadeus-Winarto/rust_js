@@ -16,8 +16,8 @@ export enum PrimitiveTypeTag {
   string = "string",
   function = "function",
 
-  integer_literal = "integer_literal",
-  float_literal = "float_literal",
+  integer_literal = "integer",
+  float_literal = "float",
 
   unit = "unit", // Represents correctly typed programs but the exact type is not needed
   unknown = "unknown",
