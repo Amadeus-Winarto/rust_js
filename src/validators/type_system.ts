@@ -4,27 +4,39 @@ import {
   ClosureContext,
   Cond_exprContext,
   Constant_declarationContext,
+  Derefed_nameContext,
   ExpressionContext,
   Function_declarationContext,
   If_expressionContext,
+  Immutable_refed_nameContext,
+  Mutable_refed_nameContext,
+  NameContext,
   Parameter_listContext,
   ProgramContext,
+  Refed_nameContext,
   Return_expressionContext,
   StatementContext,
   Variable_declarationContext,
 } from "../grammars/Rust2Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
+import type { TypeTag } from "./types";
 import {
   Validator,
   Scope,
   TypeAnnotation,
-  TypeTag,
+  PrimitiveTypeTag,
   value_to_type,
   is_integer,
   is_float,
   is_bool,
   is_promotable,
   is_comparison_operator,
+  make_reference,
+  type_to_value,
+  is_borrow,
+  unwrap_reference,
+  make_mutable_reference,
+  is_mutable_borrow,
 } from "./types";
 import { print, add_to_scope, get_type, Result } from "../utils";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
@@ -46,6 +58,46 @@ const get_unary_type_checker = (operator: string) => {
       return () => false;
   }
 };
+
+type NameType = {
+  name: NameContext;
+  num_deref: number;
+};
+
+function get_underlying_name_deref(
+  maybe_name: NameContext | undefined,
+  maybe_derefed_name: Derefed_nameContext | undefined,
+): NameType | undefined {
+  let num_deref = 1;
+  let underlying_name: NameContext | undefined;
+
+  if (maybe_name === undefined && maybe_derefed_name === undefined) {
+    return undefined;
+  }
+
+  if (maybe_derefed_name !== undefined) {
+    let curr_name = maybe_derefed_name;
+    while (true) {
+      num_deref++;
+
+      const next_derefed_name = curr_name.derefed_name();
+      if (next_derefed_name === undefined) {
+        underlying_name = curr_name.name();
+        break;
+      }
+      curr_name = next_derefed_name;
+    }
+  } else {
+    underlying_name = maybe_name;
+  }
+
+  return underlying_name === undefined
+    ? undefined
+    : {
+        name: underlying_name,
+        num_deref: num_deref,
+      };
+}
 
 type BlockResults = {
   block_type: TypeAnnotation;
@@ -69,7 +121,7 @@ class TypeProducer
   defaultResult(): Result<TypeAnnotation> {
     return {
       ok: true,
-      value: new TypeAnnotation(TypeTag.unknown),
+      value: new TypeAnnotation(PrimitiveTypeTag.unknown),
     };
   }
 
@@ -97,7 +149,7 @@ class TypeProducer
     add_to_scope(
       this.scope,
       "println!",
-      new TypeAnnotation(TypeTag.function, "<...> -> ()"),
+      new TypeAnnotation(PrimitiveTypeTag.function, "<...> -> ()"),
     );
     return this.visitChildren(ctx);
   }
@@ -117,7 +169,7 @@ class TypeProducer
 
     return {
       ok: true,
-      value: new TypeAnnotation(TypeTag.empty, ""),
+      value: new TypeAnnotation(PrimitiveTypeTag.empty, ""),
     };
   }
 
@@ -198,7 +250,7 @@ class TypeProducer
     const maybe_expr = ctx.expression();
     const empty_type: Result<TypeAnnotation> = {
       ok: true,
-      value: new TypeAnnotation(TypeTag.empty),
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
     };
     const curr_block_type: Result<TypeAnnotation> =
       maybe_expr === undefined ? empty_type : this.visit(maybe_expr);
@@ -214,7 +266,7 @@ class TypeProducer
       return_type:
         return_types.length > 0
           ? return_types[0]
-          : new TypeAnnotation(TypeTag.empty, ""),
+          : new TypeAnnotation(PrimitiveTypeTag.empty, ""),
     });
     return curr_block_type;
   }
@@ -239,7 +291,10 @@ class TypeProducer
       };
     }
     add_to_scope(this.scope, name, type);
-    return this.visitChildren(ctx);
+    return {
+      ok: true,
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
+    };
   }
 
   visitVariable_declaration(
@@ -252,7 +307,7 @@ class TypeProducer
       undefined,
       is_mutable,
     );
-    const expression_type = this.visit(ctx.expression());
+    const expression_type = this.visitExpression(ctx.expression());
     if (!expression_type.ok) {
       return expression_type;
     }
@@ -261,13 +316,16 @@ class TypeProducer
       return {
         ok: false,
         error: new TypeError(
-          `constant '${name}' declared with type ${type.type} but got ${expression_type.value.type}`,
+          `variable '${name}' declared with type ${type_to_value(type.type)} but got ${type_to_value(expression_type.value.type)}`,
           ctx.start.line,
         ),
       };
     }
     add_to_scope(this.scope, name, type);
-    return this.visitChildren(ctx);
+    return {
+      ok: true,
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
+    };
   }
 
   visitFunction_declaration(
@@ -294,7 +352,7 @@ class TypeProducer
       });
 
     for (const param of parameter_types) {
-      if (param.type === TypeTag.unknown) {
+      if (param.type === PrimitiveTypeTag.unknown) {
         this.print_fn("Unknown type in function ", name);
         return {
           ok: false,
@@ -346,10 +404,10 @@ class TypeProducer
     const intermediate_blocks = this.block_results.slice(0, -1);
 
     // Check return types of intermediate blocks
-    let intermediate_return_type = TypeTag.unknown;
+    let intermediate_return_type: TypeTag = PrimitiveTypeTag.unknown;
     for (const block of intermediate_blocks) {
       if (
-        block.return_type.type !== TypeTag.empty &&
+        block.return_type.type !== PrimitiveTypeTag.empty &&
         !is_promotable(block.return_type.type, value_to_type(return_type))
       ) {
         return {
@@ -362,19 +420,19 @@ class TypeProducer
       }
 
       intermediate_return_type =
-        intermediate_return_type === TypeTag.unknown
+        intermediate_return_type === PrimitiveTypeTag.unknown
           ? block.return_type.type
           : intermediate_return_type;
     }
 
     if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn(
         "No final expression and no return statement -> Either function declared to return empty type or all blocks return empty type",
       );
-      return return_type === TypeTag.empty
+      return return_type === PrimitiveTypeTag.empty
         ? {
             ok: true,
             value: type,
@@ -392,8 +450,8 @@ class TypeProducer
               ),
             };
     } else if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type !== TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type !== PrimitiveTypeTag.empty
     ) {
       this.print_fn("No final expression but return statement is present ");
       return is_promotable(
@@ -407,13 +465,13 @@ class TypeProducer
         : {
             ok: false,
             error: new TypeError(
-              `function '${name}' expects return type ${return_type} but got ${final_block.return_type.type}`,
+              `function '${name}' expects return type ${return_type} but got ${type_to_value(final_block.return_type.type)}`,
               ctx.start.line,
             ),
           };
     } else if (
-      final_block.block_type.type !== TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type !== PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn("Final expression but no return statement");
       return return_type === final_block.block_type.type
@@ -424,7 +482,7 @@ class TypeProducer
         : {
             ok: false,
             error: new TypeError(
-              `function '${name}' expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+              `function '${name}' expects return type ${return_type} but got the implicit return type ${type_to_value(final_block.block_type.type)}`,
               ctx.start.line,
             ),
           };
@@ -480,6 +538,27 @@ class TypeProducer
     return result;
   }
 
+  visitName(ctx: NameContext): Result<TypeAnnotation> {
+    const line_number = ctx.start.line;
+    const name = ctx.text;
+    const maybe_type = get_type(this.scope, name);
+
+    if (maybe_type === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `name '${name}' not declared in this scope`,
+          line_number,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value: maybe_type,
+    };
+  }
+
   visitExpression(ctx: ExpressionContext): Result<TypeAnnotation> {
     // Case 1: Literal
     this.print_fn("Checking expression type " + ctx.text);
@@ -488,22 +567,22 @@ class TypeProducer
       return literal_ctx.boolean_literal()
         ? {
             ok: true,
-            value: new TypeAnnotation(TypeTag.bool),
+            value: new TypeAnnotation(PrimitiveTypeTag.bool),
           }
         : literal_ctx.float_literal()
           ? {
               ok: true,
-              value: new TypeAnnotation(TypeTag.float_literal),
+              value: new TypeAnnotation(PrimitiveTypeTag.float_literal),
             }
           : literal_ctx.integer_literal()
             ? {
                 ok: true,
-                value: new TypeAnnotation(TypeTag.integer_literal),
+                value: new TypeAnnotation(PrimitiveTypeTag.integer_literal),
               }
             : literal_ctx.string_literal()
               ? {
                   ok: true,
-                  value: new TypeAnnotation(TypeTag.string),
+                  value: new TypeAnnotation(PrimitiveTypeTag.string),
                 }
               : {
                   ok: false,
@@ -517,24 +596,7 @@ class TypeProducer
     // Case 2: Name
     const name_ctx = ctx.name();
     if (name_ctx !== undefined) {
-      const line_number = name_ctx.start.line;
-      const name = name_ctx.text;
-      const maybe_type = get_type(this.scope, name);
-
-      if (maybe_type === undefined) {
-        return {
-          ok: false,
-          error: new TypeError(
-            `name '${name}' not declared in this scope`,
-            line_number,
-          ),
-        };
-      }
-
-      return {
-        ok: true,
-        value: maybe_type,
-      };
+      return this.visitName(name_ctx);
     }
 
     // Case 3: Block
@@ -562,9 +624,9 @@ class TypeProducer
 
       if (is_integer(left_type) && is_integer(right_type)) {
         const has_lazy_type =
-          left_type === TypeTag.integer_literal
+          left_type === PrimitiveTypeTag.integer_literal
             ? left
-            : right_type === TypeTag.integer_literal
+            : right_type === PrimitiveTypeTag.integer_literal
               ? right
               : undefined;
 
@@ -581,7 +643,7 @@ class TypeProducer
           }
 
           const result_type = is_comparison_operator(binop_ctx.text)
-            ? new TypeAnnotation(TypeTag.bool)
+            ? new TypeAnnotation(PrimitiveTypeTag.bool)
             : new TypeAnnotation(left_type);
           return {
             ok: true,
@@ -590,25 +652,25 @@ class TypeProducer
         } else {
           // Lazily-evaluated type --> the other type must be the same as the non-lazily-evaluated type
 
-          return left_type === TypeTag.integer_literal
+          return left_type === PrimitiveTypeTag.integer_literal
             ? {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(right_type),
               }
             : {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(left_type),
               };
         }
       } else if (is_float(left_type) && is_float(right_type)) {
         const has_lazy_type =
-          left_type === TypeTag.float_literal
+          left_type === PrimitiveTypeTag.float_literal
             ? left
-            : right_type === TypeTag.float_literal
+            : right_type === PrimitiveTypeTag.float_literal
               ? right
               : undefined;
 
@@ -624,24 +686,24 @@ class TypeProducer
           }
 
           const result_type = is_comparison_operator(binop_ctx.text)
-            ? new TypeAnnotation(TypeTag.bool)
+            ? new TypeAnnotation(PrimitiveTypeTag.bool)
             : new TypeAnnotation(left_type);
           return {
             ok: true,
             value: result_type,
           };
         } else {
-          return left_type === TypeTag.float_literal
+          return left_type === PrimitiveTypeTag.float_literal
             ? {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(right_type),
               }
             : {
                 ok: true,
                 value: is_comparison_operator(binop_ctx.text)
-                  ? new TypeAnnotation(TypeTag.bool)
+                  ? new TypeAnnotation(PrimitiveTypeTag.bool)
                   : new TypeAnnotation(left_type),
               };
         }
@@ -684,7 +746,7 @@ class TypeProducer
 
       return {
         ok: true,
-        value: new TypeAnnotation(TypeTag.bool),
+        value: new TypeAnnotation(PrimitiveTypeTag.bool),
       };
     }
 
@@ -728,7 +790,7 @@ class TypeProducer
       }
 
       // Get arguments
-      if (maybe_type.type !== TypeTag.function) {
+      if (maybe_type.type !== PrimitiveTypeTag.function) {
         return {
           ok: false,
           error: new Error(
@@ -767,11 +829,12 @@ class TypeProducer
         return maybe_error;
       }
       const arg_types = annotated_arg_types
-        .map((arg) => (arg.ok ? arg.value.type : TypeTag.unknown))
-        .filter((t) => t !== TypeTag.unknown);
+        .map((arg) => (arg.ok ? arg.value.type : PrimitiveTypeTag.unknown))
+        .filter((t) => t !== PrimitiveTypeTag.unknown);
 
       const parameter_has_unit_type =
-        parameter_types.length === 1 && parameter_types[0] === TypeTag.unit;
+        parameter_types.length === 1 &&
+        parameter_types[0] === PrimitiveTypeTag.unit;
       if (parameter_has_unit_type) {
         // Function takes in variable number of arguments of any type --> only println! macro should
         // exhibit this behaviour
@@ -839,10 +902,199 @@ class TypeProducer
       return this.visitAssignment(assignment_ctx);
     }
 
+    // Case 12: refed_name
+    const refed_name_ctx = ctx.refed_name();
+    if (refed_name_ctx !== undefined) {
+      return this.visitRefed_name(refed_name_ctx);
+    }
+
+    // Case 13: Derefed name
+    const derefed_name_ctx = ctx.derefed_name();
+    if (derefed_name_ctx !== undefined) {
+      return this.visitDerefed_name(derefed_name_ctx);
+    }
+
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
       error: new TypeError(`unknown expression type`, ctx.start.line),
+    };
+  }
+
+  visitImmutable_refed_name(
+    ctx: Immutable_refed_nameContext,
+  ): Result<TypeAnnotation> {
+    const maybe_name = ctx.name();
+    const maybe_refed_name = ctx.refed_name();
+
+    if (maybe_name === undefined && maybe_refed_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug!`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    let type =
+      maybe_name !== undefined
+        ? this.visitName(maybe_name)
+        : maybe_refed_name !== undefined
+          ? this.visitRefed_name(maybe_refed_name)
+          : undefined;
+
+    if (type === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug! [Impossible code path]`,
+          ctx.start.line,
+        ),
+      };
+    }
+    if (!type.ok) {
+      return type;
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(make_reference(type.value.type)),
+    };
+  }
+
+  visitMutable_refed_name(
+    ctx: Mutable_refed_nameContext,
+  ): Result<TypeAnnotation> {
+    const maybe_name = ctx.name();
+    const maybe_refed_name = ctx.refed_name();
+
+    if (maybe_name === undefined && maybe_refed_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug!`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    let type =
+      maybe_name !== undefined
+        ? this.visitName(maybe_name)
+        : maybe_refed_name !== undefined
+          ? this.visitRefed_name(maybe_refed_name)
+          : undefined;
+    let name =
+      maybe_name !== undefined ? maybe_name.text : maybe_refed_name?.text;
+
+    if (type === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug! [Impossible code path]`,
+          ctx.start.line,
+        ),
+      };
+    }
+    if (!type.ok) {
+      return type;
+    }
+
+    if (!type.value.is_mutable) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `cannot borrow ${name} as mutable, as it is not declared as mutable`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(
+        make_mutable_reference(type.value.type),
+        undefined,
+        true,
+      ),
+    };
+  }
+
+  visitRefed_name(ctx: Refed_nameContext): Result<TypeAnnotation> {
+    const maybe_immutable_refed_name = ctx.immutable_refed_name();
+    if (maybe_immutable_refed_name !== undefined) {
+      return this.visitImmutable_refed_name(maybe_immutable_refed_name);
+    }
+
+    const maybe_mutable_refed_name = ctx.mutable_refed_name();
+    if (maybe_mutable_refed_name !== undefined) {
+      return this.visitMutable_refed_name(maybe_mutable_refed_name);
+    }
+
+    return {
+      ok: false,
+      error: new TypeError(
+        `refed_name has no immutable_refed_name or mutable_refed_name. This is a Parser bug!`,
+        ctx.start.line,
+      ),
+    };
+  }
+
+  visitDerefed_name(ctx: Derefed_nameContext): Result<TypeAnnotation> {
+    const maybe_name = ctx.name();
+    const maybe_derefed_name = ctx.derefed_name();
+
+    if (maybe_name === undefined && maybe_derefed_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `derefed_name has no name or derefed_name. This is a Parser bug!`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    let maybe_underlying_name = get_underlying_name_deref(
+      maybe_name,
+      maybe_derefed_name,
+    );
+    if (maybe_underlying_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `derefed_name has no name or derefed_name. This is a Parser bug! [Impossible code path]`,
+          ctx.start.line,
+        ),
+      };
+    }
+    const underlying_name = maybe_underlying_name.name;
+    const num_deref = maybe_underlying_name.num_deref;
+
+    const name_type = this.visitName(underlying_name);
+    if (!name_type.ok) {
+      return name_type;
+    }
+
+    // Number of dereferences must be less than or equal to the number of references
+    let curr_type_tag = name_type.value.type;
+    for (let i = num_deref; i > 0; i--) {
+      if (!is_borrow(curr_type_tag)) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `type ${type_to_value(curr_type_tag)} cannot be dereferenced`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      curr_type_tag = unwrap_reference(curr_type_tag);
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(curr_type_tag),
     };
   }
 
@@ -905,11 +1157,11 @@ class TypeProducer
     const intermediate_blocks = this.block_results.slice(0, -1);
 
     // Check return types of intermediate blocks
-    let intermediate_return_type = TypeTag.unknown;
+    let intermediate_return_type: TypeTag = PrimitiveTypeTag.unknown;
     for (const block of intermediate_blocks) {
       if (
-        block.return_type.type !== TypeTag.empty &&
-        !is_promotable(block.return_type.type, value_to_type(return_type))
+        block.return_type.type !== PrimitiveTypeTag.empty &&
+        !is_promotable(block.return_type.type, return_type)
       ) {
         return {
           ok: false,
@@ -921,24 +1173,24 @@ class TypeProducer
       }
 
       intermediate_return_type =
-        intermediate_return_type === TypeTag.unknown
+        intermediate_return_type === PrimitiveTypeTag.unknown
           ? block.return_type.type
           : intermediate_return_type;
     }
 
     if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn(
         "No final expression and no return statement -> Either closure declared to return empty type or all blocks return empty type",
       );
-      return return_type === TypeTag.empty
+      return return_type === PrimitiveTypeTag.empty
         ? {
             ok: true,
             value: type,
           }
-        : is_promotable(intermediate_return_type, value_to_type(return_type))
+        : is_promotable(intermediate_return_type, return_type)
           ? {
               ok: true,
               value: type,
@@ -951,14 +1203,11 @@ class TypeProducer
               ),
             };
     } else if (
-      final_block.block_type.type === TypeTag.empty &&
-      final_block.return_type.type !== TypeTag.empty
+      final_block.block_type.type === PrimitiveTypeTag.empty &&
+      final_block.return_type.type !== PrimitiveTypeTag.empty
     ) {
       this.print_fn("No final expression but return statement is present ");
-      return is_promotable(
-        final_block.return_type.type,
-        value_to_type(return_type),
-      )
+      return is_promotable(final_block.return_type.type, return_type)
         ? {
             ok: true,
             value: type,
@@ -971,8 +1220,8 @@ class TypeProducer
             ),
           };
     } else if (
-      final_block.block_type.type !== TypeTag.empty &&
-      final_block.return_type.type === TypeTag.empty
+      final_block.block_type.type !== PrimitiveTypeTag.empty &&
+      final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn("Final expression but no return statement");
       return return_type === final_block.block_type.type
@@ -990,9 +1239,7 @@ class TypeProducer
     } else {
       // Both final expression and return statement are present
       this.print_fn("Both final expression and return statement are present");
-      if (
-        !is_promotable(final_block.return_type.type, value_to_type(return_type))
-      ) {
+      if (!is_promotable(final_block.return_type.type, return_type)) {
         return {
           ok: false,
           error: new TypeError(
@@ -1002,9 +1249,7 @@ class TypeProducer
         };
       }
 
-      if (
-        !is_promotable(final_block.block_type.type, value_to_type(return_type))
-      ) {
+      if (!is_promotable(final_block.block_type.type, return_type)) {
         return {
           ok: false,
           error: new TypeError(
@@ -1022,47 +1267,130 @@ class TypeProducer
   }
 
   visitAssignment(ctx: AssignmentContext): Result<TypeAnnotation> {
-    const name = ctx.name().text;
-    const type = get_type(this.scope, name);
-    if (type === undefined) {
+    const maybe_name = ctx.name();
+    const maybe_derefed_name = ctx.derefed_name();
+
+    if (maybe_name === undefined && maybe_derefed_name === undefined) {
       return {
         ok: false,
         error: new TypeError(
-          `variable '${name}' not declared in this scope`,
+          `assignment has no name or derefed_name. This is a Parser bug!`,
           ctx.start.line,
         ),
       };
-    }
+    } else if (maybe_name !== undefined) {
+      const type_annotation = this.visitName(maybe_name);
+      if (!type_annotation.ok) {
+        return type_annotation;
+      }
 
-    if (!type.is_mutable) {
+      const name = maybe_name.text;
+      const type = type_annotation.value;
+      if (type === undefined) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `variable '${name}' not declared in this scope`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      if (!type.is_mutable) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `cannot assign to immutable variable ${name} with type ${type_to_value(type.type)}`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      const expr = this.visit(ctx.expression());
+      if (!expr.ok) {
+        return expr;
+      }
+
+      if (!is_promotable(expr.value.type, type.type)) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `variable '${name}' declared with type ${type_to_value(type.type)} but got ${type_to_value(expr.value.type)}`,
+            ctx.start.line,
+          ),
+        };
+      }
+
       return {
-        ok: false,
-        error: new TypeError(
-          `cannot assign to immutable variable ${name} with type ${type}`,
-          ctx.start.line,
-        ),
+        ok: true,
+        value: new TypeAnnotation(PrimitiveTypeTag.empty),
       };
-    }
+    } else {
+      let derefed_name = maybe_derefed_name; // Will not be undefined
+      const maybe_underlying_name = get_underlying_name_deref(
+        derefed_name?.name(),
+        derefed_name?.derefed_name(),
+      );
 
-    const expr = this.visit(ctx.expression());
-    if (!expr.ok) {
-      return expr;
-    }
+      if (maybe_underlying_name === undefined) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `assignment has no name or derefed_name. This is a Parser bug!`,
+            ctx.start.line,
+          ),
+        };
+      }
 
-    if (!is_promotable(expr.value.type, type.type)) {
+      const { name, num_deref } = maybe_underlying_name;
+      const name_type = this.visitName(name);
+      if (!name_type.ok) {
+        return name_type;
+      }
+
+      // Number of dereferences must be less than or equal to the number of references
+      let curr_type_tag = name_type.value.type;
+      for (let i = num_deref; i > 0; i--) {
+        if (!is_borrow(curr_type_tag)) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `type ${type_to_value(curr_type_tag)} cannot be dereferenced`,
+              ctx.start.line,
+            ),
+          };
+        } else if (!is_mutable_borrow(curr_type_tag)) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `cannot assign to ${maybe_derefed_name?.text}, which is behind an immutable reference`,
+              ctx.start.line,
+            ),
+          };
+        }
+
+        curr_type_tag = unwrap_reference(curr_type_tag);
+      }
+      const expr = this.visit(ctx.expression());
+      if (!expr.ok) {
+        return expr;
+      }
+
+      if (!is_promotable(expr.value.type, curr_type_tag)) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `variable '${name}' declared with type ${type_to_value(name_type.value.type)} but got ${type_to_value(expr.value.type)}`,
+            ctx.start.line,
+          ),
+        };
+      }
+
       return {
-        ok: false,
-        error: new TypeError(
-          `variable '${name}' declared with type ${type.type} but got ${expr.value.type}`,
-          ctx.start.line,
-        ),
+        ok: true,
+        value: new TypeAnnotation(PrimitiveTypeTag.empty),
       };
     }
-
-    return {
-      ok: true,
-      value: type,
-    };
   }
 
   visitCond_expr(ctx: Cond_exprContext): Result<TypeAnnotation> {
@@ -1075,7 +1403,7 @@ class TypeProducer
       return {
         ok: false,
         error: new TypeError(
-          `condition expression must be of type bool but got ${result.value.type}`,
+          `condition expression must be of type bool but got ${type_to_value(result.value.type)}`,
           ctx.start.line,
         ),
       };
@@ -1095,7 +1423,7 @@ class TypeProducer
       return {
         ok: false,
         error: new TypeError(
-          `condition expression must be of type bool but got ${condition_type.value.type}`,
+          `condition expression must be of type bool but got ${type_to_value(condition_type.value.type)}`,
           ctx.start.line,
         ),
       };

@@ -85,6 +85,10 @@ export enum OpCodes {
   NEQF = 83,
   NEQB = 84,
 
+  // Additional Opcodes
+  LDPA = 85,
+  DEREF = 86,
+
   // custom opcodes
   ARRAY_LEN = 1000,
   DISPLAY = 1001,
