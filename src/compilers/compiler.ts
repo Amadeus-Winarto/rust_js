@@ -1,4 +1,4 @@
-import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
+import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import { Result } from "../utils";
 import OpCodes from "./opcodes";
 

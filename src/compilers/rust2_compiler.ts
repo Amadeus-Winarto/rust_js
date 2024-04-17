@@ -33,6 +33,10 @@ import {
   Binary_operatorContext,
   ClosureContext,
   AssignmentContext,
+  Refed_nameContext,
+  Derefed_nameContext,
+  Immutable_refed_nameContext,
+  Mutable_refed_nameContext,
 } from "../grammars/Rust2Parser";
 import { Rust2CompileTimeEvaluator } from "./rust2_compile_time_evaluator";
 import OpCodes from "./opcodes";
@@ -63,6 +67,71 @@ type Output = {
   instructions: Instructions;
 };
 type InstructionCompilerOutput = Result<Output, CompilerError>;
+
+type NameType = {
+  name: NameContext;
+  num_deref: number;
+};
+
+function get_underlying_name_deref_rec(
+  derefed_name: Derefed_nameContext,
+  num_deref: number,
+): NameType | undefined {
+  // Base Case:
+  const maybe_name = derefed_name.name();
+  if (maybe_name !== undefined) {
+    return {
+      name: maybe_name,
+      num_deref: num_deref + 1,
+    };
+  }
+
+  // Recursive Case:
+  const maybe_derefed_name = derefed_name.derefed_name();
+  if (maybe_derefed_name !== undefined) {
+    return get_underlying_name_deref_rec(maybe_derefed_name, num_deref + 1);
+  }
+
+  return undefined;
+}
+
+function get_underlying_name_deref(derefed_name: Derefed_nameContext) {
+  return get_underlying_name_deref_rec(derefed_name, 0);
+}
+
+function get_underlying_name_ref(name: Refed_nameContext): string {
+  const maybe_immutable = name.immutable_refed_name();
+  if (maybe_immutable !== undefined) {
+    return get_underlying_name_immutable(maybe_immutable);
+  }
+
+  const maybe_mutable = name.mutable_refed_name();
+  if (maybe_mutable !== undefined) {
+    return get_underlying_name_mutable(maybe_mutable);
+  }
+
+  return "NOT_REACHABLE";
+}
+
+function get_underlying_name_immutable(
+  name: Immutable_refed_nameContext,
+): string {
+  const maybe_name = name.name();
+  if (maybe_name !== undefined) {
+    return maybe_name.text;
+  }
+
+  const maybe_refed_name = name.refed_name();
+  if (maybe_refed_name !== undefined) {
+    return get_underlying_name_ref(maybe_refed_name);
+  }
+
+  return "NOT_REACHABLE";
+}
+
+function get_underlying_name_mutable(name: Mutable_refed_nameContext): string {
+  return get_underlying_name_immutable(name as Immutable_refed_nameContext);
+}
 
 function add_pop_result_instr(
   output: InstructionCompilerOutput,
@@ -589,6 +658,18 @@ class Rust2InstructionCompiler
       return this.visitAssignment(assignment_ctx);
     }
 
+    // Case 12: dereferenced name
+    const derefed_name_ctx = ctx.derefed_name();
+    if (derefed_name_ctx !== undefined) {
+      return this.visitDerefed_name(derefed_name_ctx);
+    }
+
+    // Case 13: referenced name
+    const refed_name_ctx = ctx.refed_name();
+    if (refed_name_ctx !== undefined) {
+      return this.visitRefed_name(refed_name_ctx);
+    }
+
     return {
       ok: false,
       error: new CompilerError(
@@ -598,12 +679,141 @@ class Rust2InstructionCompiler
     };
   }
 
+  visitRefed_name(ctx: Refed_nameContext): InstructionCompilerOutput {
+    const name = ctx.text;
+    const underlying_name = get_underlying_name_ref(ctx);
+
+    const maybe_lookup_success = name_recursive_lookup(
+      this.environments,
+      underlying_name,
+    );
+    if (maybe_lookup_success === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          `Unknown variable ${name}. This is a ValidatorError!`,
+        ),
+      };
+    }
+
+    const [env_index, index] = maybe_lookup_success;
+    const parent_index = this.environments.length - 1 - env_index;
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: 1,
+        instructions: [
+          { opcode: OpCodes.LDPA, operands: [index, parent_index] },
+        ],
+      },
+    };
+  }
+
+  visitDerefed_name(ctx: Derefed_nameContext): InstructionCompilerOutput {
+    const name = ctx.text;
+    const maybe_underlying_name = get_underlying_name_deref(ctx);
+    if (maybe_underlying_name === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          `Unknown variable ${name}. This is a ValidatorError!`,
+        ),
+      };
+    }
+
+    const { name: underlying_name_ctx, num_deref } = maybe_underlying_name;
+    const underlying_name = underlying_name_ctx.text;
+
+    const maybe_lookup_success = name_recursive_lookup(
+      this.environments,
+      underlying_name,
+    );
+    if (maybe_lookup_success === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          `Unknown variable ${name}. This is a ValidatorError!`,
+        ),
+      };
+    }
+
+    const [env_index, index] = maybe_lookup_success;
+    const parent_index = this.environments.length - 1 - env_index;
+    const instructions: Instructions = [
+      {
+        opcode: OpCodes.LDPG,
+        operands: [index, parent_index],
+      },
+    ];
+
+    // Perform dereferences
+    for (let i = 0; i < num_deref; i++) {
+      instructions.push({ opcode: OpCodes.DEREF, operands: [] });
+    }
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: 1,
+        instructions,
+      },
+    };
+  }
+
   visitAssignment(ctx: AssignmentContext): InstructionCompilerOutput {
     this.print_fn("Visiting assignment");
-    const name = ctx.name().text;
+    const maybe_name = ctx.name();
+    if (maybe_name !== undefined) {
+      return this.visitAssignment_impl(
+        ctx.start.line,
+        maybe_name.text,
+        ctx.expression(),
+      );
+    }
 
+    const maybe_derefed_name = ctx.derefed_name();
+    if (maybe_derefed_name !== undefined) {
+      const maybe_underlying_name =
+        get_underlying_name_deref(maybe_derefed_name);
+      if (maybe_underlying_name === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            `Unknown variable ${maybe_derefed_name.text}. This is a ValidatorError!`,
+          ),
+        };
+      }
+
+      const { name: underlying_name_ctx, num_deref } = maybe_underlying_name;
+
+      return this.visitAssignment_impl(
+        ctx.start.line,
+        underlying_name_ctx.text,
+        ctx.expression(),
+      );
+    }
+
+    return {
+      ok: false,
+      error: new CompilerError(
+        ctx.start.line,
+        "Unknown assignment. This should not happen.",
+      ),
+    };
+  }
+
+  visitAssignment_impl(
+    line_number: number,
+    name: string,
+    expr_ctx: ExpressionContext,
+  ): InstructionCompilerOutput {
     // Compile the expression
-    const maybe_compiled_expression = this.visit(ctx.expression());
+    const maybe_compiled_expression = this.visitExpression(expr_ctx);
     if (!maybe_compiled_expression.ok) {
       return maybe_compiled_expression;
     }
@@ -615,7 +825,7 @@ class Rust2InstructionCompiler
       return {
         ok: false,
         error: new CompilerError(
-          ctx.start.line,
+          line_number,
           `Unknown variable ${name}. This is a ValidatorError!`,
         ),
       };
