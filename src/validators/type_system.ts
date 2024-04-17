@@ -365,7 +365,7 @@ class TypeProducer
     }
 
     const parameter_type =
-      "<" + parameter_types.map((t) => t.type.toString()).join(", ") + ">";
+      "<" + parameter_types.map((t) => type_to_value(t.type)).join(", ") + ">";
 
     // Register function in current scope
     const type = new TypeAnnotation(
@@ -714,7 +714,7 @@ class TypeProducer
       return {
         ok: false,
         error: new TypeError(
-          `type mismatch: operator ${binop_ctx.text} does not support types ${left_type} and ${right_type}`,
+          `type mismatch: operator ${binop_ctx.text} does not support types ${type_to_value(left_type)} and ${type_to_value(right_type)}`,
           ctx.start.line,
         ),
       };
@@ -864,7 +864,7 @@ class TypeProducer
           return {
             ok: false,
             error: new TypeError(
-              `type mismatch: function '${function_name}' expects type ${parameter_types[i]} but got ${arg_types[i]}`,
+              `type mismatch: function '${function_name}' expects type ${type_to_value(parameter_types[i])} but got ${type_to_value(arg_types[i])} for argument ${i + 1}`,
               ctx.start.line,
             ),
           };
@@ -1117,7 +1117,7 @@ class TypeProducer
         parameter_types.push(type);
       });
     const parameter_type =
-      "<" + parameter_types.map((t) => t.type.toString()).join(", ") + ">";
+      "<" + parameter_types.map((t) => type_to_value(t)).join(", ") + ">";
 
     this.print_fn(
       "Adding closure to scope with type ",
