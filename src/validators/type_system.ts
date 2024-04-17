@@ -1300,7 +1300,7 @@ class TypeProducer
         return {
           ok: false,
           error: new TypeError(
-            `cannot assign to immutable variable ${name} with type ${type_to_value(type)}`,
+            `cannot assign to immutable variable ${name} with type ${type_to_value(type.type)}`,
             ctx.start.line,
           ),
         };
@@ -1315,7 +1315,7 @@ class TypeProducer
         return {
           ok: false,
           error: new TypeError(
-            `variable '${name}' declared with type ${type.type} but got ${expr.value.type}`,
+            `variable '${name}' declared with type ${type_to_value(type.type)} but got ${type_to_value(expr.value.type)}`,
             ctx.start.line,
           ),
         };
@@ -1380,7 +1380,7 @@ class TypeProducer
         return {
           ok: false,
           error: new TypeError(
-            `variable '${name}' declared with type ${name_type.value.type} but got ${expr.value.type}`,
+            `variable '${name}' declared with type ${type_to_value(name_type.value.type)} but got ${type_to_value(expr.value.type)}`,
             ctx.start.line,
           ),
         };
@@ -1403,7 +1403,7 @@ class TypeProducer
       return {
         ok: false,
         error: new TypeError(
-          `condition expression must be of type bool but got ${result.value.type}`,
+          `condition expression must be of type bool but got ${type_to_value(result.value.type)}`,
           ctx.start.line,
         ),
       };
@@ -1423,7 +1423,7 @@ class TypeProducer
       return {
         ok: false,
         error: new TypeError(
-          `condition expression must be of type bool but got ${condition_type.value.type}`,
+          `condition expression must be of type bool but got ${type_to_value(condition_type.value.type)}`,
           ctx.start.line,
         ),
       };
