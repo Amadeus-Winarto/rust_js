@@ -84,3 +84,39 @@ let mut x: i32 = 3;
 let y: &i32 = &x;
 let z: &mut i32 = &mut x;// Error: cannot borrow `x` as immutable because it is also borrowed as mutable
 ```
+
+### Lifetimes
+
+Rust's borrowing rules is in part enforced by lifetimes. Lifetimes are a way to ensure that references are valid for a certain amount of time. For example:
+
+```rust
+fn main() -> () {
+    let mut s: i32 = 3;
+    let r1: &i32 = &s;
+    let r2: &i32 = &s;
+    let r3: &mut i32 = &mut s;
+}
+```
+
+is perfectly valid in Rust. This is because the lifetimes of `r1` and `r2` are shorter than the lifetime of `r3`, as the borrow checker can prove that `r1` and `r2` are no longer in use when `r3` is borrowed.
+
+We simplify our implementation of Rust2 by not implementing lifetime deductions. In Rust2, the lifetime of a reference is always equal to the most restrictive block scope. The above code is therefore invalid in Rust2 as the lifetimes of `r1` and `r2` are equal to the lifetime of `r3`. This simplification allows us to avoid the complexity of lifetime deductions.
+
+#### Lifetime and Threads
+
+// TODO: Implement this feature
+Because threads' lifetimes are not known at compile time, any references passed to a thread is assumed to have an infinite lifetime. For example:
+
+```rust
+fn main() -> () {
+    {
+        let s: i32 = 3;
+        let r1: &i32 = &s;
+        let handle = std::thread::spawn(move || {
+            println!("{}", r1);
+        });
+    }
+}
+```
+
+will error in Rust and Rust2. This is because the lifetime of `r1` is assumed to be infinite, which is longer than the lifetime of the lender `s`.
