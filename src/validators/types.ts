@@ -40,6 +40,27 @@ export function make_mutable_reference(
   return new Reference(new Mutable(type_tag));
 }
 
+export function is_immutable_borrow(type: TypeTag): boolean {
+  return type instanceof Reference && !(type.type instanceof Mutable);
+}
+
+export function is_mutable_borrow(type: TypeTag): boolean {
+  return type instanceof Reference && type.type instanceof Mutable;
+}
+
+export function is_borrow(type: TypeTag): boolean {
+  return type instanceof Reference;
+}
+
+export function unwrap_reference(type: TypeTag): TypeTag {
+  if (type instanceof Reference && type.type instanceof Mutable) {
+    return type.type.type;
+  } else if (type instanceof Reference) {
+    return type.type;
+  }
+  return type;
+}
+
 export class TypeAnnotation {
   constructor(
     public type: TypeTag,
@@ -136,7 +157,8 @@ export function is_promotable(type: TypeTag, target: TypeTag): boolean {
   if (type === PrimitiveTypeTag.float_literal) {
     return is_float(target);
   }
-  return type === target;
+
+  return type_to_value(type) === type_to_value(target);
 }
 
 export function is_float(type: TypeTag): boolean {

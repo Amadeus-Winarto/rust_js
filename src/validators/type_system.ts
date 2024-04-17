@@ -4,11 +4,16 @@ import {
   ClosureContext,
   Cond_exprContext,
   Constant_declarationContext,
+  Derefed_nameContext,
   ExpressionContext,
   Function_declarationContext,
   If_expressionContext,
+  Immutable_refed_nameContext,
+  Mutable_refed_nameContext,
+  NameContext,
   Parameter_listContext,
   ProgramContext,
+  Refed_nameContext,
   Return_expressionContext,
   StatementContext,
   Variable_declarationContext,
@@ -26,6 +31,12 @@ import {
   is_bool,
   is_promotable,
   is_comparison_operator,
+  make_reference,
+  type_to_value,
+  is_borrow,
+  unwrap_reference,
+  make_mutable_reference,
+  is_mutable_borrow,
 } from "./types";
 import { print, add_to_scope, get_type, Result } from "../utils";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
@@ -47,6 +58,46 @@ const get_unary_type_checker = (operator: string) => {
       return () => false;
   }
 };
+
+type NameType = {
+  name: NameContext;
+  num_deref: number;
+};
+
+function get_underlying_name_deref(
+  maybe_name: NameContext | undefined,
+  maybe_derefed_name: Derefed_nameContext | undefined,
+): NameType | undefined {
+  let num_deref = 1;
+  let underlying_name: NameContext | undefined;
+
+  if (maybe_name === undefined && maybe_derefed_name === undefined) {
+    return undefined;
+  }
+
+  if (maybe_derefed_name !== undefined) {
+    let curr_name = maybe_derefed_name;
+    while (true) {
+      num_deref++;
+
+      const next_derefed_name = curr_name.derefed_name();
+      if (next_derefed_name === undefined) {
+        underlying_name = curr_name.name();
+        break;
+      }
+      curr_name = next_derefed_name;
+    }
+  } else {
+    underlying_name = maybe_name;
+  }
+
+  return underlying_name === undefined
+    ? undefined
+    : {
+        name: underlying_name,
+        num_deref: num_deref,
+      };
+}
 
 type BlockResults = {
   block_type: TypeAnnotation;
@@ -256,7 +307,7 @@ class TypeProducer
       undefined,
       is_mutable,
     );
-    const expression_type = this.visit(ctx.expression());
+    const expression_type = this.visitExpression(ctx.expression());
     if (!expression_type.ok) {
       return expression_type;
     }
@@ -265,7 +316,7 @@ class TypeProducer
       return {
         ok: false,
         error: new TypeError(
-          `constant '${name}' declared with type ${type.type} but got ${expression_type.value.type}`,
+          `variable '${name}' declared with type ${type_to_value(type.type)} but got ${type_to_value(expression_type.value.type)}`,
           ctx.start.line,
         ),
       };
@@ -414,7 +465,7 @@ class TypeProducer
         : {
             ok: false,
             error: new TypeError(
-              `function '${name}' expects return type ${return_type} but got ${final_block.return_type.type}`,
+              `function '${name}' expects return type ${return_type} but got ${type_to_value(final_block.return_type.type)}`,
               ctx.start.line,
             ),
           };
@@ -431,7 +482,7 @@ class TypeProducer
         : {
             ok: false,
             error: new TypeError(
-              `function '${name}' expects return type ${return_type} but got the implicit return type ${final_block.block_type.type}`,
+              `function '${name}' expects return type ${return_type} but got the implicit return type ${type_to_value(final_block.block_type.type)}`,
               ctx.start.line,
             ),
           };
@@ -851,10 +902,199 @@ class TypeProducer
       return this.visitAssignment(assignment_ctx);
     }
 
+    // Case 12: refed_name
+    const refed_name_ctx = ctx.refed_name();
+    if (refed_name_ctx !== undefined) {
+      return this.visitRefed_name(refed_name_ctx);
+    }
+
+    // Case 13: Derefed name
+    const derefed_name_ctx = ctx.derefed_name();
+    if (derefed_name_ctx !== undefined) {
+      return this.visitDerefed_name(derefed_name_ctx);
+    }
+
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
       error: new TypeError(`unknown expression type`, ctx.start.line),
+    };
+  }
+
+  visitImmutable_refed_name(
+    ctx: Immutable_refed_nameContext,
+  ): Result<TypeAnnotation> {
+    const maybe_name = ctx.name();
+    const maybe_refed_name = ctx.refed_name();
+
+    if (maybe_name === undefined && maybe_refed_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug!`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    let type =
+      maybe_name !== undefined
+        ? this.visitName(maybe_name)
+        : maybe_refed_name !== undefined
+          ? this.visitRefed_name(maybe_refed_name)
+          : undefined;
+
+    if (type === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug! [Impossible code path]`,
+          ctx.start.line,
+        ),
+      };
+    }
+    if (!type.ok) {
+      return type;
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(make_reference(type.value.type)),
+    };
+  }
+
+  visitMutable_refed_name(
+    ctx: Mutable_refed_nameContext,
+  ): Result<TypeAnnotation> {
+    const maybe_name = ctx.name();
+    const maybe_refed_name = ctx.refed_name();
+
+    if (maybe_name === undefined && maybe_refed_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug!`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    let type =
+      maybe_name !== undefined
+        ? this.visitName(maybe_name)
+        : maybe_refed_name !== undefined
+          ? this.visitRefed_name(maybe_refed_name)
+          : undefined;
+    let name =
+      maybe_name !== undefined ? maybe_name.text : maybe_refed_name?.text;
+
+    if (type === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `refed_name has no name or refed_name. This is a Parser bug! [Impossible code path]`,
+          ctx.start.line,
+        ),
+      };
+    }
+    if (!type.ok) {
+      return type;
+    }
+
+    if (!type.value.is_mutable) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `cannot borrow ${name} as mutable, as it is not declared as mutable`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(
+        make_mutable_reference(type.value.type),
+        undefined,
+        true,
+      ),
+    };
+  }
+
+  visitRefed_name(ctx: Refed_nameContext): Result<TypeAnnotation> {
+    const maybe_immutable_refed_name = ctx.immutable_refed_name();
+    if (maybe_immutable_refed_name !== undefined) {
+      return this.visitImmutable_refed_name(maybe_immutable_refed_name);
+    }
+
+    const maybe_mutable_refed_name = ctx.mutable_refed_name();
+    if (maybe_mutable_refed_name !== undefined) {
+      return this.visitMutable_refed_name(maybe_mutable_refed_name);
+    }
+
+    return {
+      ok: false,
+      error: new TypeError(
+        `refed_name has no immutable_refed_name or mutable_refed_name. This is a Parser bug!`,
+        ctx.start.line,
+      ),
+    };
+  }
+
+  visitDerefed_name(ctx: Derefed_nameContext): Result<TypeAnnotation> {
+    const maybe_name = ctx.name();
+    const maybe_derefed_name = ctx.derefed_name();
+
+    if (maybe_name === undefined && maybe_derefed_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `derefed_name has no name or derefed_name. This is a Parser bug!`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    let maybe_underlying_name = get_underlying_name_deref(
+      maybe_name,
+      maybe_derefed_name,
+    );
+    if (maybe_underlying_name === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `derefed_name has no name or derefed_name. This is a Parser bug! [Impossible code path]`,
+          ctx.start.line,
+        ),
+      };
+    }
+    const underlying_name = maybe_underlying_name.name;
+    const num_deref = maybe_underlying_name.num_deref;
+
+    const name_type = this.visitName(underlying_name);
+    if (!name_type.ok) {
+      return name_type;
+    }
+
+    // Number of dereferences must be less than or equal to the number of references
+    let curr_type_tag = name_type.value.type;
+    for (let i = num_deref; i > 0; i--) {
+      if (!is_borrow(curr_type_tag)) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `type ${type_to_value(curr_type_tag)} cannot be dereferenced`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      curr_type_tag = unwrap_reference(curr_type_tag);
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(curr_type_tag),
     };
   }
 
@@ -1027,47 +1267,130 @@ class TypeProducer
   }
 
   visitAssignment(ctx: AssignmentContext): Result<TypeAnnotation> {
-    const name = ctx.name().text;
-    const type = get_type(this.scope, name);
-    if (type === undefined) {
+    const maybe_name = ctx.name();
+    const maybe_derefed_name = ctx.derefed_name();
+
+    if (maybe_name === undefined && maybe_derefed_name === undefined) {
       return {
         ok: false,
         error: new TypeError(
-          `variable '${name}' not declared in this scope`,
+          `assignment has no name or derefed_name. This is a Parser bug!`,
           ctx.start.line,
         ),
       };
-    }
+    } else if (maybe_name !== undefined) {
+      const type_annotation = this.visitName(maybe_name);
+      if (!type_annotation.ok) {
+        return type_annotation;
+      }
 
-    if (!type.is_mutable) {
+      const name = maybe_name.text;
+      const type = type_annotation.value;
+      if (type === undefined) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `variable '${name}' not declared in this scope`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      if (!type.is_mutable) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `cannot assign to immutable variable ${name} with type ${type_to_value(type)}`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      const expr = this.visit(ctx.expression());
+      if (!expr.ok) {
+        return expr;
+      }
+
+      if (!is_promotable(expr.value.type, type.type)) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `variable '${name}' declared with type ${type.type} but got ${expr.value.type}`,
+            ctx.start.line,
+          ),
+        };
+      }
+
       return {
-        ok: false,
-        error: new TypeError(
-          `cannot assign to immutable variable ${name} with type ${type}`,
-          ctx.start.line,
-        ),
+        ok: true,
+        value: new TypeAnnotation(PrimitiveTypeTag.empty),
       };
-    }
+    } else {
+      let derefed_name = maybe_derefed_name; // Will not be undefined
+      const maybe_underlying_name = get_underlying_name_deref(
+        derefed_name?.name(),
+        derefed_name?.derefed_name(),
+      );
 
-    const expr = this.visit(ctx.expression());
-    if (!expr.ok) {
-      return expr;
-    }
+      if (maybe_underlying_name === undefined) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `assignment has no name or derefed_name. This is a Parser bug!`,
+            ctx.start.line,
+          ),
+        };
+      }
 
-    if (!is_promotable(expr.value.type, type.type)) {
+      const { name, num_deref } = maybe_underlying_name;
+      const name_type = this.visitName(name);
+      if (!name_type.ok) {
+        return name_type;
+      }
+
+      // Number of dereferences must be less than or equal to the number of references
+      let curr_type_tag = name_type.value.type;
+      for (let i = num_deref; i > 0; i--) {
+        if (!is_borrow(curr_type_tag)) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `type ${type_to_value(curr_type_tag)} cannot be dereferenced`,
+              ctx.start.line,
+            ),
+          };
+        } else if (!is_mutable_borrow(curr_type_tag)) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `cannot assign to ${maybe_derefed_name?.text}, which is behind an immutable reference`,
+              ctx.start.line,
+            ),
+          };
+        }
+
+        curr_type_tag = unwrap_reference(curr_type_tag);
+      }
+      const expr = this.visit(ctx.expression());
+      if (!expr.ok) {
+        return expr;
+      }
+
+      if (!is_promotable(expr.value.type, curr_type_tag)) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `variable '${name}' declared with type ${name_type.value.type} but got ${expr.value.type}`,
+            ctx.start.line,
+          ),
+        };
+      }
+
       return {
-        ok: false,
-        error: new TypeError(
-          `variable '${name}' declared with type ${type.type} but got ${expr.value.type}`,
-          ctx.start.line,
-        ),
+        ok: true,
+        value: new TypeAnnotation(PrimitiveTypeTag.empty),
       };
     }
-
-    return {
-      ok: true,
-      value: type,
-    };
   }
 
   visitCond_expr(ctx: Cond_exprContext): Result<TypeAnnotation> {

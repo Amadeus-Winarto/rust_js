@@ -89,7 +89,7 @@ async function main() {
     new SyntaxValidator(DEBUG_MODE),
     new EntrypointValidator(DEBUG_MODE),
     new DeclarationValidator(DEBUG_MODE),
-    new TypeSystemValidator(true),
+    new TypeSystemValidator(DEBUG_MODE),
   ];
   console.log("Validating...");
   for (const validator of validators) {
