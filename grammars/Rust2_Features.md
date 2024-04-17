@@ -69,3 +69,18 @@ Notes:
     ```
 
     compiles in Rust but not in Rust2.
+
+### Borrow Checker
+
+One of the key features in Rust is the borrow checker. The borrow checker enforces the rules of borrowing at compile time. The rules of borrowing are:
+
+1. At any given time, there can be either one mutable reference or any number of immutable references.
+2. References must always be valid.
+
+ For example, the following code will not compile:
+
+```rust
+let mut x: i32 = 3;
+let y: &i32 = &x;
+let z: &mut i32 = &mut x;// Error: cannot borrow `x` as immutable because it is also borrowed as mutable
+```
