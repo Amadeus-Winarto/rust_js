@@ -582,7 +582,9 @@ class TypeProducer
             : literal_ctx.string_literal()
               ? {
                   ok: true,
-                  value: new TypeAnnotation(PrimitiveTypeTag.string),
+                  value: new TypeAnnotation(
+                    make_reference(PrimitiveTypeTag.string),
+                  ),
                 }
               : {
                   ok: false,

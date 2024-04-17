@@ -69,9 +69,10 @@ export class Rust2Parser extends Parser {
   public static readonly T__40 = 41;
   public static readonly T__41 = 42;
   public static readonly T__42 = 43;
-  public static readonly JUNK = 44;
-  public static readonly NUMBER = 45;
-  public static readonly IDENTIFIER = 46;
+  public static readonly T__43 = 44;
+  public static readonly JUNK = 45;
+  public static readonly NUMBER = 46;
+  public static readonly IDENTIFIER = 47;
   public static readonly RULE_program = 0;
   public static readonly RULE_program_element = 1;
   public static readonly RULE_statement = 2;
@@ -210,9 +211,11 @@ export class Rust2Parser extends Parser {
     "'i32'",
     "'f32'",
     "'bool'",
+    "'str'",
     "'println!'",
   ];
   private static readonly _SYMBOLIC_NAMES: Array<string | undefined> = [
+    undefined,
     undefined,
     undefined,
     undefined,
@@ -429,7 +432,7 @@ export class Rust2Parser extends Parser {
         case Rust2Parser.T__35:
         case Rust2Parser.T__36:
         case Rust2Parser.T__37:
-        case Rust2Parser.T__42:
+        case Rust2Parser.T__43:
         case Rust2Parser.NUMBER:
         case Rust2Parser.IDENTIFIER:
           this.enterOuterAlt(_localctx, 4);
@@ -989,7 +992,7 @@ export class Rust2Parser extends Parser {
         this.state = 196;
         this._errHandler.sync(this);
         switch (this._input.LA(1)) {
-          case Rust2Parser.T__42:
+          case Rust2Parser.T__43:
           case Rust2Parser.IDENTIFIER:
             {
               this.state = 194;
@@ -1284,7 +1287,7 @@ export class Rust2Parser extends Parser {
                 (1 << (Rust2Parser.T__35 - 33)) |
                 (1 << (Rust2Parser.T__36 - 33)) |
                 (1 << (Rust2Parser.T__37 - 33)) |
-                (1 << (Rust2Parser.T__42 - 33)) |
+                (1 << (Rust2Parser.T__43 - 33)) |
                 (1 << (Rust2Parser.NUMBER - 33)) |
                 (1 << (Rust2Parser.IDENTIFIER - 33)))) !==
               0)
@@ -1399,7 +1402,7 @@ export class Rust2Parser extends Parser {
                 (1 << (Rust2Parser.T__35 - 33)) |
                 (1 << (Rust2Parser.T__36 - 33)) |
                 (1 << (Rust2Parser.T__37 - 33)) |
-                (1 << (Rust2Parser.T__42 - 33)) |
+                (1 << (Rust2Parser.T__43 - 33)) |
                 (1 << (Rust2Parser.NUMBER - 33)) |
                 (1 << (Rust2Parser.IDENTIFIER - 33)))) !==
               0)
@@ -1912,6 +1915,7 @@ export class Rust2Parser extends Parser {
                 (1 << (Rust2Parser.T__40 - 32)) |
                 (1 << (Rust2Parser.T__41 - 32)) |
                 (1 << (Rust2Parser.T__42 - 32)) |
+                (1 << (Rust2Parser.T__43 - 32)) |
                 (1 << (Rust2Parser.JUNK - 32)) |
                 (1 << (Rust2Parser.NUMBER - 32)) |
                 (1 << (Rust2Parser.IDENTIFIER - 32)))) !==
@@ -1996,6 +2000,7 @@ export class Rust2Parser extends Parser {
         case Rust2Parser.T__39:
         case Rust2Parser.T__40:
         case Rust2Parser.T__41:
+        case Rust2Parser.T__42:
           this.enterOuterAlt(_localctx, 1);
           {
             this.state = 315;
@@ -2052,7 +2057,8 @@ export class Rust2Parser extends Parser {
               ((1 << (Rust2Parser.T__18 - 19)) |
                 (1 << (Rust2Parser.T__39 - 19)) |
                 (1 << (Rust2Parser.T__40 - 19)) |
-                (1 << (Rust2Parser.T__41 - 19)))) !==
+                (1 << (Rust2Parser.T__41 - 19)) |
+                (1 << (Rust2Parser.T__42 - 19)))) !==
               0
           )
         ) {
@@ -2176,7 +2182,7 @@ export class Rust2Parser extends Parser {
       this.enterOuterAlt(_localctx, 1);
       {
         this.state = 334;
-        this.match(Rust2Parser.T__42);
+        this.match(Rust2Parser.T__43);
       }
     } catch (re) {
       if (re instanceof RecognitionException) {
@@ -2311,7 +2317,7 @@ export class Rust2Parser extends Parser {
             this.match(Rust2Parser.IDENTIFIER);
           }
           break;
-        case Rust2Parser.T__42:
+        case Rust2Parser.T__43:
           this.enterOuterAlt(_localctx, 2);
           {
             this.state = 347;
@@ -2364,7 +2370,7 @@ export class Rust2Parser extends Parser {
   }
 
   public static readonly _serializedATN: string =
-    "\x03\uC91D\uCABA\u058D\uAFBA\u4F53\u0607\uEA8B\uC241\x030\u0161\x04\x02" +
+    "\x03\uC91D\uCABA\u058D\uAFBA\u4F53\u0607\uEA8B\uC241\x031\u0161\x04\x02" +
     "\t\x02\x04\x03\t\x03\x04\x04\t\x04\x04\x05\t\x05\x04\x06\t\x06\x04\x07" +
     "\t\x07\x04\b\t\b\x04\t\t\t\x04\n\t\n\x04\v\t\v\x04\f\t\f\x04\r\t\r\x04" +
     "\x0E\t\x0E\x04\x0F\t\x0F\x04\x10\t\x10\x04\x11\t\x11\x04\x12\t\x12\x04" +
@@ -2404,7 +2410,7 @@ export class Rust2Parser extends Parser {
     "(\x02*\x02,\x02.\x020\x022\x024\x026\x028\x02:\x02<\x02>\x02@\x02B\x02" +
     "D\x02F\x02H\x02J\x02L\x02N\x02P\x02R\x02T\x02V\x02X\x02Z\x02\x02\b\x04" +
     "\x02\x0E\x0E\x19\"\x04\x02\x1A\x1A##\x04\x02\x0F\x0F$$\x03\x02&'\x03" +
-    "\x02()\x04\x02\x15\x15*,\x02\u0161\x02\\\x03\x02\x02\x02\x04g\x03\x02" +
+    "\x02()\x04\x02\x15\x15*-\x02\u0161\x02\\\x03\x02\x02\x02\x04g\x03\x02" +
     "\x02\x02\x06q\x03\x02\x02\x02\bs\x03\x02\x02\x02\n{\x03\x02\x02\x02\f" +
     "\x85\x03\x02\x02\x02\x0E\x87\x03\x02\x02\x02\x10\x8E\x03\x02\x02\x02\x12" +
     "\x9F\x03\x02\x02\x02\x14\xB0\x03\x02\x02\x02\x16\xB6\x03\x02\x02\x02\x18" +
@@ -2485,7 +2491,7 @@ export class Rust2Parser extends Parser {
     "\x07\x15\x02\x02\u010A\u010B\x07\x11\x02\x02\u010B\u010C\x056\x1C\x02" +
     "\u010C\u010D\x07\x12\x02\x02\u010D\u010F\x03\x02\x02\x02\u010E\u0109\x03" +
     "\x02\x02\x02\u010E\u010A\x03\x02\x02\x02\u010F3\x03\x02\x02\x02\u0110" +
-    "\u0111\x070\x02\x02\u0111\u0112\x07\x05\x02\x02\u0112\u0113\x05J&\x02" +
+    "\u0111\x071\x02\x02\u0111\u0112\x07\x05\x02\x02\u0112\u0113\x05J&\x02" +
     "\u01135\x03\x02\x02\x02\u0114\u0119\x054\x1B\x02\u0115\u0116\x07\x16\x02" +
     "\x02\u0116\u0118\x054\x1B\x02\u0117\u0115\x03\x02\x02\x02\u0118\u011B" +
     "\x03\x02\x02\x02\u0119\u0117\x03\x02\x02\x02\u0119\u011A\x03\x02\x02\x02" +
@@ -2496,8 +2502,8 @@ export class Rust2Parser extends Parser {
     '\u0124\u0129\x05@!\x02\u0125\u0129\x05B"\x02\u0126\u0129\x05D#\x02\u0127' +
     "\u0129\x05F$\x02\u0128\u0124\x03\x02\x02\x02\u0128\u0125\x03\x02\x02\x02" +
     "\u0128\u0126\x03\x02\x02\x02\u0128\u0127\x03\x02\x02\x02\u0129?\x03\x02" +
-    "\x02\x02\u012A\u012B\x07/\x02\x02\u012BA\x03\x02\x02\x02\u012C\u012D\x07" +
-    "/\x02\x02\u012D\u012E\x07%\x02\x02\u012E\u012F\x07/\x02\x02\u012FC\x03" +
+    "\x02\x02\u012A\u012B\x070\x02\x02\u012BA\x03\x02\x02\x02\u012C\u012D\x07" +
+    "0\x02\x02\u012D\u012E\x07%\x02\x02\u012E\u012F\x070\x02\x02\u012FC\x03" +
     "\x02\x02\x02\u0130\u0131\t\x05\x02\x02\u0131E\x03\x02\x02\x02\u0132\u0136" +
     "\x07(\x02\x02\u0133\u0135\x05H%\x02\u0134\u0133\x03\x02\x02\x02\u0135" +
     "\u0138\x03\x02\x02\x02\u0136\u0134\x03\x02\x02\x02\u0136\u0137\x03\x02" +
@@ -2511,12 +2517,12 @@ export class Rust2Parser extends Parser {
     "\x02\u0148\u0146\x03\x02\x02\x02\u0149O\x03\x02\x02\x02\u014A\u014B\x07" +
     "\r\x02\x02\u014B\u014F\x05L'\x02\u014C\u014D\x07\r\x02\x02\u014D\u014F" +
     "\x05J&\x02\u014E\u014A\x03\x02\x02\x02\u014E\u014C\x03\x02\x02\x02\u014F" +
-    "Q\x03\x02\x02\x02\u0150\u0151\x07-\x02\x02\u0151S\x03\x02\x02\x02\u0152" +
+    "Q\x03\x02\x02\x02\u0150\u0151\x07.\x02\x02\u0151S\x03\x02\x02\x02\u0152" +
     "\u0157\x05V,\x02\u0153\u0157\x05X-\x02\u0154\u0157\x05Z.\x02\u0155\u0157" +
     "\x05R*\x02\u0156\u0152\x03\x02\x02\x02\u0156\u0153\x03\x02\x02\x02\u0156" +
     "\u0154\x03\x02\x02\x02\u0156\u0155\x03\x02\x02\x02\u0157U\x03\x02\x02" +
-    "\x02\u0158\u0159\x070\x02\x02\u0159W\x03\x02\x02\x02\u015A\u015B\x070" +
-    "\x02\x02\u015BY\x03\x02\x02\x02\u015C\u015F\x070\x02\x02\u015D\u015F\x05" +
+    "\x02\u0158\u0159\x071\x02\x02\u0159W\x03\x02\x02\x02\u015A\u015B\x071" +
+    "\x02\x02\u015BY\x03\x02\x02\x02\u015C\u015F\x071\x02\x02\u015D\u015F\x05" +
     "R*\x02\u015E\u015C\x03\x02\x02\x02\u015E\u015D\x03\x02\x02\x02\u015F[" +
     "\x03\x02\x02\x02 `gq\x85\x9F\xA9\xAB\xB0\xB6\xBC\xC2\xC6\xD5\xE1\xE3\xEC" +
     "\xF3\xF6\xFF\u0103\u010E\u0119\u011C\u0128\u0136\u0140\u0148\u014E\u0156" +
