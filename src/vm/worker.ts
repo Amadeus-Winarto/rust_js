@@ -1048,7 +1048,7 @@ M[OpCodes.DEREF] = () => {
 // Thread id of newly created thread will be allocated on the heap
 // Address of thread id allocated on heap will be on top of OS after NEWT ends
 M[OpCodes.NEWT] = () => {
-  A = P[PC][NEWT_ADDR_OFFSET] as number
+  A = PC + (P[PC][NEWT_ADDR_OFFSET] as number)
   A = THREAD_INIT()
   NEW_THREAD()
   OS.push(RES)
@@ -1128,9 +1128,9 @@ M[OpCodes.DISPLAY] = () => {
 // Copy environment and instructions of current thread
 function THREAD_INIT(): ThreadId {
   const buf = new Int32Array(new SharedArrayBuffer(4))
-  SYSCALL_PORT.postMessage([Syscall.CLONE, A, ENV, buf])
+  SYSCALL_PORT.postMessage([Syscall.CLONE, FN, A, ENV, OS, buf])
   Atomics.wait(buf, 0, 0)
-  return buf[0]
+  return buf[0] // thread id of new created thread should not be 0
 }
 
 export const JOIN_THREAD_EXITED = 1
