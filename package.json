@@ -4,7 +4,7 @@
   "description": "A Virtual Machine for Rust",
   "main": "src/main.ts",
   "scripts": {
-    "gen_parser": "antlr4ts -visitor grammars/Rust1.g4 -o src/",
+    "gen_parser": "antlr4ts -visitor grammars/Rust2.g4 -o src/",
     "main": "tsx src/main.ts",
     "prettier": "npx prettier --write src/**/*.ts"
   },
@@ -15,6 +15,7 @@
     "antlr4": "^4.13.1-patch-1",
     "antlr4ts": "^0.5.0-alpha.4",
     "prettier": "^3.2.5",
+    "static-handler": "^0.4.3",
     "ts-node": "^10.9.2"
   },
   "devDependencies": {

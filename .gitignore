@@ -4,3 +4,6 @@ node_modules
 
 # Ignore rust files that support rust-analyzer
 samples/target
+
+# Ignore outputs
+output

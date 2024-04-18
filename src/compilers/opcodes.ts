@@ -84,6 +84,15 @@ export enum OpCodes {
   NEQG = 82,
   NEQF = 83,
   NEQB = 84,
+  GOTO = 85,
+  NEWT = 86,
+  ENDT = 87,
+  JOIN = 88,
+  NEWL = 89,
+  LOCK = 90,
+  UNLOCK = 91,
+  LDPA = 92,
+  DEREF = 93,
 
   // custom opcodes
   ARRAY_LEN = 1000,

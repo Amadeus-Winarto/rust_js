@@ -7,7 +7,7 @@ import {
   Parameter_listContext,
   ProgramContext,
   Variable_declarationContext,
-} from "../grammars/Rust1Parser";
+} from "../grammars/Rust2Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import {
   Validator,
@@ -15,9 +15,9 @@ import {
   printScopes,
   TypeAnnotation,
   value_to_type,
-  TypeTag,
+  PrimitiveTypeTag,
 } from "./types";
-import { Rust1Visitor as RustVisitor } from "../grammars/Rust1Visitor";
+import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import {
   print,
   add_to_scope,
@@ -26,6 +26,12 @@ import {
   in_scope_untyped_recursive,
 } from "../utils";
 import { SemanticError } from "./utils/errors";
+import {
+  Closure_parameter_listContext,
+  ClosureContext,
+} from "../grammars/Rust2Parser";
+
+const null_type = new TypeAnnotation(PrimitiveTypeTag.empty);
 
 class DeclarationRuleValidator
   extends AbstractParseTreeVisitor<Result<Boolean>>
@@ -65,7 +71,7 @@ class DeclarationRuleValidator
     add_to_scope(
       this.scope,
       "println!",
-      new TypeAnnotation(TypeTag.function, "<...> -> ()"),
+      new TypeAnnotation(PrimitiveTypeTag.function, "<...> -> ()"),
     );
     return this.visitChildren(ctx);
   }
@@ -81,7 +87,7 @@ class DeclarationRuleValidator
   visitConstant_declaration(ctx: Constant_declarationContext): Result<Boolean> {
     this.print_fn("Visiting constant_declaration");
     const name = ctx.const_name().text;
-    const type = new TypeAnnotation(value_to_type(ctx.type().text));
+    const type = null_type;
 
     if (in_scope_untyped(this.scope, name)) {
       this.print_fn(
@@ -106,7 +112,7 @@ class DeclarationRuleValidator
   visitVariable_declaration(ctx: Variable_declarationContext): Result<Boolean> {
     this.print_fn("Visiting variable_declaration");
     const name = ctx.var_name().text;
-    const type = new TypeAnnotation(value_to_type(ctx.type().text));
+    const type = null_type;
 
     if (in_scope_untyped(this.scope, name)) {
       this.print_fn(
@@ -131,7 +137,7 @@ class DeclarationRuleValidator
   visitFunction_declaration(ctx: Function_declarationContext): Result<Boolean> {
     this.print_fn("Visiting function_declaration");
     const name = ctx.function_name().text;
-    const type = new TypeAnnotation(value_to_type("function"));
+    const type = null_type;
 
     // Register function name in current scope
     if (in_scope_untyped(this.scope, name)) {
@@ -158,6 +164,22 @@ class DeclarationRuleValidator
     return result;
   }
 
+  visitClosure(ctx: ClosureContext): Result<Boolean> {
+    this.print_fn("Visiting closure");
+    this.print_fn("Creating new scope for closure parameters");
+    this.scope.push(new Map());
+    const result = this.visitChildren(ctx);
+    this.scope.pop();
+    return result;
+  }
+
+  visitClosure_parameter_list(
+    ctx: Closure_parameter_listContext,
+  ): Result<Boolean> {
+    this.print_fn("Visiting closure's parameter_list");
+    return this.visitParameter_list(ctx as Parameter_listContext);
+  }
+
   visitParameter_list(ctx: Parameter_listContext): Result<Boolean> {
     this.print_fn("Visiting parameter_list");
 
@@ -167,7 +189,7 @@ class DeclarationRuleValidator
       const params = maybe_params.parameter();
       for (const param of params) {
         const name = param.IDENTIFIER().text;
-        const type = new TypeAnnotation(value_to_type(param.type().text));
+        const type = null_type;
 
         if (in_scope_untyped(this.scope, name)) {
           this.print_fn(

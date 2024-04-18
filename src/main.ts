@@ -2,8 +2,8 @@ import { createInterface } from "readline";
 import { existsSync, readFileSync } from "fs";
 
 import { CharStreams, CommonTokenStream } from "antlr4ts";
-import { Rust1Lexer as RustLexer } from "./grammars/Rust1Lexer";
-import { Rust1Parser as RustParser } from "./grammars/Rust1Parser";
+import { Rust2Lexer as RustLexer } from "./grammars/Rust2Lexer";
+import { Rust2Parser as RustParser } from "./grammars/Rust2Parser";
 
 import { Validator } from "./validators/types";
 import { SyntaxValidator } from "./validators/syntax";
@@ -11,10 +11,11 @@ import { EntrypointValidator } from "./validators/entrypoint";
 import { DeclarationValidator } from "./validators/declaration";
 import { TypeSystemValidator } from "./validators/type_system";
 
-import { Rust1Compiler } from "./compilers/rust1_compiler";
+import { Rust2Compiler } from "./compilers/rust2_compiler";
 import { OpCodes } from "./compilers/opcodes";
 import { saveJson } from "./utils";
 import { Instruction } from "./compilers/compiler";
+import { BorrowCheckerValidator } from "./validators/borrow_checker";
 
 const DEBUG_MODE = false;
 const get_basename = (filename: string) => filename.split(/[\\/]/).pop();
@@ -90,6 +91,7 @@ async function main() {
     new EntrypointValidator(DEBUG_MODE),
     new DeclarationValidator(DEBUG_MODE),
     new TypeSystemValidator(DEBUG_MODE),
+    new BorrowCheckerValidator(DEBUG_MODE),
   ];
   console.log("Validating...");
   for (const validator of validators) {
@@ -104,7 +106,7 @@ async function main() {
   console.log();
 
   // Compile the program
-  const compiler = new Rust1Compiler(DEBUG_MODE);
+  const compiler = new Rust2Compiler(DEBUG_MODE);
   console.log("Compiling...");
   const result = compiler.visit(tree);
   if (!result.ok) {

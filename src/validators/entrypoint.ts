@@ -1,5 +1,5 @@
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
-import { ProgramContext } from "../grammars/Rust1Parser";
+import { ProgramContext } from "../grammars/Rust2Parser";
 import { Validator } from "./types";
 import { print } from "../utils";
 
