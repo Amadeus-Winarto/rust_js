@@ -1,7 +1,3 @@
-fn main() -> () {
-    testing();
-}
-
 fn testing() -> i32 {
     let x: bool = if true {
         return 2;
@@ -10,4 +6,8 @@ fn testing() -> i32 {
         return 4;
         false
     };
+}
+
+fn main() -> () {
+    testing();
 }

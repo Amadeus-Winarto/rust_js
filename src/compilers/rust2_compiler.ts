@@ -943,27 +943,69 @@ class Rust2InstructionCompiler
     return this.visit(ctx.expression());
   }
 
+  compile_built_in_function(
+    ctx: Function_applicationContext,
+    function_name: string,
+  ): InstructionCompilerOutput {
+    const instructions = [];
+
+    if (function_name === "println!") {
+      // Load the arguments to the stack
+      let max_stack_size = 0;
+      const arguments_list = ctx.args_list().args()?.expression() || [];
+      for (const argument of arguments_list) {
+        const maybe_compiled_argument = this.visitExpression(argument);
+        if (!maybe_compiled_argument.ok) {
+          return maybe_compiled_argument;
+        }
+        max_stack_size = Math.max(
+          max_stack_size,
+          maybe_compiled_argument.value.max_stack_size,
+        );
+
+        instructions.push(...maybe_compiled_argument.value.instructions);
+      }
+
+      // Display the arguments
+      instructions.push({
+        opcode: OpCodes.DISPLAY,
+        operands: [instructions.length],
+      });
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: arguments_list.length + max_stack_size,
+          instructions,
+        },
+      };
+    }
+
+    return {
+      ok: false,
+      error: new CompilerError(
+        ctx.start.line,
+        `Function ${function_name} not found in environment. This is a Validator error.`,
+      ),
+    };
+  }
+
   visitFunction_application(
     ctx: Function_applicationContext,
   ): InstructionCompilerOutput {
     this.print_fn("Visiting function_application");
 
     const function_name = ctx.function_name().text;
-
-    // TODO: This allows variable names to shadow function names!
     const maybe_lookup_success = name_recursive_lookup(
       this.environments,
       function_name,
     );
 
     if (maybe_lookup_success === undefined) {
-      return {
-        ok: false,
-        error: new CompilerError(
-          ctx.start.line,
-          `Function ${function_name} not found in environment. This is a Validator error.`,
-        ),
-      };
+      // Function not found in environment --> Function must originate from
+      // compile-time context (i.e. a built-in function)
+
+      return this.compile_built_in_function(ctx, function_name);
     }
 
     const instructions = [];

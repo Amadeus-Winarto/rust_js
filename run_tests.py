@@ -4,9 +4,7 @@
 import os
 
 FILE_DIR = os.path.dirname(os.path.realpath(__file__))
-BLACKLIST = set(
-    ["function_decl.rs", "function_edge_cases.rs", "if_expr.rs", "shadowing.rs"]
-)
+BLACKLIST = set(["if_expr.rs", "shadowing.rs"])
 
 
 def get_source_files():
@@ -72,6 +70,7 @@ if __name__ == "__main__":
             if expected == actual:
                 passed_tests += 1
             else:
+                print(f"Failed test for {file}")
                 print(f"Expected: {expected}")
                 print(f"Actual: {actual}")
                 sys.exit(1)

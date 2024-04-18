@@ -832,9 +832,12 @@ class TypeProducer
         .slice(1, -1);
       const return_type_string = function_type_string.split("->")[1].trim();
 
-      const parameter_types = parameter_type_string
-        .split(",")
-        .map((t) => value_to_type(t.trim()));
+      const parameter_types =
+        parameter_type_string.length === 0
+          ? []
+          : parameter_type_string
+              .split(",")
+              .map((t) => value_to_type(t.trim()));
       const return_type = value_to_type(return_type_string);
 
       const maybe_args = function_ctx.args_list().args()?.expression();
