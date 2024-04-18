@@ -493,7 +493,10 @@ class TypeProducer
       final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn("Final expression but no return statement");
-      return return_type === final_block.block_type.type
+      return is_promotable(
+        final_block.block_type.type,
+        value_to_type(return_type),
+      )
         ? {
             ok: true,
             value: type,
@@ -1471,7 +1474,10 @@ class TypeProducer
       return else_block_type;
     }
 
-    if (!then_block_type.value.equals(else_block_type.value)) {
+    if (
+      !is_promotable(then_block_type.value.type, else_block_type.value.type) &&
+      !is_promotable(else_block_type.value.type, then_block_type.value.type)
+    ) {
       return {
         ok: false,
         error: new TypeError(
