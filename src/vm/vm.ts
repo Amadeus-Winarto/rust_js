@@ -55,11 +55,11 @@ function init_thread_port(workerId: WorkerId, port: MessagePort) {
         }
         scheduler.removeThread(thread.ID)
         // unblock all the threads waiting on this thread to terminate, if any
-        if (joinThreads.has(thread.ID)) {
-          const blockedThreads = joinThreads.get(thread.ID)
+        const blockedThreads = joinThreads.get(thread.ID)
+        if (blockedThreads !== undefined) {
           for (let i = 0; i < blockedThreads.length; i++) {
-            scheduler.unblockThread(blockedThreads[i])
-            threads.get(blockedThreads[i]).status = ThreadStatus.READY
+            scheduler.unblockThread(blockedThreads![i])
+            threads.get(blockedThreads[i])!.status = ThreadStatus.READY
           }
         }
         break
@@ -86,7 +86,7 @@ function init_syscall_port(port: MessagePort) {
     const syscall: Syscall = message.data[0]
     let buf: Int32Array
     let lockId: LockId
-    let lock: Lock
+    let lock: Lock | undefined
     switch (syscall) {
       case Syscall.CLONE:
         const FN: number = message.data[1]
@@ -115,13 +115,13 @@ function init_syscall_port(port: MessagePort) {
         Atomics.store(buf, 0, id)
         Atomics.notify(buf, 0, 1)
         // Check if there is an idle worker to send this thread for execution
-        if (idleWorkers.length > 0) {
+        const workerId = idleWorkers.shift()
+        if (workerId !== undefined) {
           const res: [ThreadId, number] | null = scheduler.runThread()
           if (res === null) {
             throw Error("Scheduler has no thread to run even after new thread was created")
           }
-          const workerId = idleWorkers.shift()
-          const thread_port = threadChannels.get(workerId).port1
+          const thread_port = threadChannels.get(workerId)!.port1
           thread_port.postMessage([threads.get(res[0]), res[1]])
         }
         break
@@ -133,7 +133,7 @@ function init_syscall_port(port: MessagePort) {
           throw Error("VM received a request to join a thread that does not exist")
         }
         // Check if joinCallee has terminated
-        if (threads.get(joinCallee).status === ThreadStatus.TERMINATED) {
+        if (threads.get(joinCallee)!.status === ThreadStatus.TERMINATED) {
           Atomics.store(buf, 0, JOIN_THREAD_EXITED)
           Atomics.notify(buf, 0, 1)
         } else {
@@ -141,7 +141,7 @@ function init_syscall_port(port: MessagePort) {
             joinThreads.set(joinCallee, [])
           }
           // Store all the threads waiting on joinCallee to terminate
-          joinThreads.get(joinCallee).push(joinCaller)
+          joinThreads.get(joinCallee)!.push(joinCaller)
           Atomics.store(buf, 0, JOIN_THREAD_NOT_EXITED)
           Atomics.notify(buf, 0, 1)
         }
@@ -157,40 +157,43 @@ function init_syscall_port(port: MessagePort) {
         const threadId: ThreadId = message.data[1]
         lockId = message.data[2]
         buf = message.data[3]
-        if (!locks.has(lockId)) {
-          throw Error("VM received a request to lock a lock that does not exist")
-        }
         lock = locks.get(lockId)
-        if (lock.locked) {
-          lock.queue.push(threadId)
-          Atomics.store(buf, 0, LOCK_NOT_ACQUIRED)
-          Atomics.notify(buf, 0, 1)
+        if (lock === undefined) {
+          throw Error("VM received a request to lock a lock that does not exist")
         } else {
-          lock.locked = true
-          Atomics.store(buf, 0, LOCK_ACQUIRED)
-          Atomics.notify(buf, 0, 1)
+          if (lock.locked) {
+            lock.queue.push(threadId)
+            Atomics.store(buf, 0, LOCK_NOT_ACQUIRED)
+            Atomics.notify(buf, 0, 1)
+          } else {
+            lock.locked = true
+            Atomics.store(buf, 0, LOCK_ACQUIRED)
+            Atomics.notify(buf, 0, 1)
+          }
         }
         break
       case Syscall.UNLOCK:
         lockId = message.data[1]
-        if (!locks.has(lockId)) {
-          throw Error("VM received a request to unlock a lock that does not exist")
-        }
         lock = locks.get(lockId)
-        if (!lock.locked) {
-          throw Error("VM received a request to unlock a lock that is already unlocked")
+        if (lock === undefined) {
+          throw Error("VM received a request to unlock a lock that does not exist")
         } else {
-          if (lock.queue.length === 0) {
-            lock.locked = false
+          if (!lock.locked) {
+            throw Error("VM received a request to unlock a lock that is already unlocked")
           } else {
             const i = lock.queue.shift()
-            scheduler.unblockThread(i)
-            threads.get(i).status = ThreadStatus.READY
+            if (i === undefined) {
+              // no other threads waiting on this lock
+              lock.locked = false
+            } else {
+              scheduler.unblockThread(i)
+              threads.get(i)!.status = ThreadStatus.READY
+            }
           }
         }
         break
       case Syscall.LOCK_DESTROY:
-        lockId
+        // TODO: Implement lock destroy syscall to clean up locks that are no longer in use
         break
       default:
         throw Error("VM received an invalid syscall")
@@ -238,11 +241,15 @@ function SHUT_DOWN_MACHINE() {
 }
 
 function RUN_MACHINE() {
-  if (idleWorkers.length > 0) {
+  const workerId = idleWorkers.shift()
+  if (workerId !== undefined) {
     const res: [ThreadId, number] | null = scheduler.runThread()
-    const workerId = idleWorkers.shift()
-    const port = threadChannels.get(workerId).port1
-    port.postMessage([threads.get(res[0]), res[1]])
+    if (res !== null) {
+      const port = threadChannels.get(workerId)!.port1
+      port.postMessage([threads.get(res[0]), res[1]])
+    } else {
+      throw Error("Scheduler returns null for runThread after main thread was added")
+    }
   } else {
     throw Error("No workers to run machine")
   }

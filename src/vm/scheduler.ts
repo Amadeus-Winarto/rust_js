@@ -50,13 +50,13 @@ export class RoundRobinScheduler implements Scheduler {
   // null means there are no ready threads to run
   // or no idle workers to run threads on
   runThread(): [ThreadId, number] | null {
-    if (this._readyThreads.length === 0) {
-      return null
-    } else {
-      const nextThread = this._readyThreads.shift()
+    const nextThread = this._readyThreads.shift()
+    if (nextThread !== undefined) {
       const timeQuanta = Math.ceil((0.5 + Math.random() * 0.5) * this._maxTimeQuanta)
       this._runningThreads.add(nextThread)
       return [nextThread, timeQuanta]
+    } else {
+      return null
     }
   }
   // Thread should be running before being removed

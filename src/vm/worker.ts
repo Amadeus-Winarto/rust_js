@@ -534,8 +534,9 @@ M[OpCodes.NOP] = () => {
   PC = PC + 1
 }
 
+// Relative addressing
 M[OpCodes.GOTO] = () => {
-  PC = P[PC][GOTO_PC_OFFSET] as number
+  PC = PC + (P[PC][GOTO_PC_OFFSET] as number)
 }
 
 M[OpCodes.LGCI] = () => {
@@ -1115,11 +1116,13 @@ M[OpCodes.UNLOCK] = () => {
 
 M[OpCodes.DISPLAY] = () => {
   A = P[PC][CALL_ARITY_OFFSET]
-  let res = []
+  let res: any[] = []
   for (let i = 0; i < A; i++) {
     res.push(convertToJsFormat(OS.pop()))
   }
   console.log(...res)
+  NEW_UNDEFINED()
+  OS.push(RES)
   PC = PC + 1
 }
 
