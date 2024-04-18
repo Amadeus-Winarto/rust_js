@@ -1000,7 +1000,7 @@ class Rust2InstructionCompiler
       // Display the arguments
       instructions.push({
         opcode: OpCodes.DISPLAY,
-        operands: [instructions.length],
+        operands: [arguments_list.length],
       });
 
       return {
