@@ -19,6 +19,8 @@ export enum PrimitiveTypeTag {
   integer_literal = "integer",
   float_literal = "float",
 
+  join_handle = "JoinHandle",
+
   unit = "unit", // Represents correctly typed programs but the exact type is not needed
   unknown = "unknown",
 }
@@ -83,7 +85,7 @@ export class TypeAnnotation {
   }
 }
 
-function value_to_primitive_type(value: string): TypeTag {
+function value_to_primitive_type_tag(value: string): TypeTag {
   if (value === "i32") {
     return PrimitiveTypeTag.i32;
   }
@@ -120,22 +122,22 @@ function value_to_primitive_type(value: string): TypeTag {
   return PrimitiveTypeTag.unknown;
 }
 
-export function value_to_type(value: string): TypeTag {
+export function value_to_type_tag(value: string): TypeTag {
   if (value.startsWith("&mut")) {
-    return new Reference(new Mutable(value_to_type(value.slice(4).trim())));
+    return new Reference(new Mutable(value_to_type_tag(value.slice(4).trim())));
   } else if (value.startsWith("&")) {
-    return new Reference(value_to_type(value.slice(1)));
+    return new Reference(value_to_type_tag(value.slice(1)));
   } else {
-    return value_to_primitive_type(value);
+    return value_to_primitive_type_tag(value);
   }
 }
 
-export function type_to_value(type: TypeTag): string {
+export function type_tag_to_value(type: TypeTag): string {
   if (type instanceof Reference) {
     if (type.type instanceof Mutable) {
-      return "&mut " + type_to_value(type.type.type);
+      return "&mut " + type_tag_to_value(type.type.type);
     } else {
-      return "&" + type_to_value(type.type);
+      return "&" + type_tag_to_value(type.type);
     }
   } else {
     return type;
@@ -158,7 +160,7 @@ export function is_promotable(type: TypeTag, target: TypeTag): boolean {
     return is_float(target);
   }
 
-  return type_to_value(type) === type_to_value(target);
+  return type_tag_to_value(type) === type_tag_to_value(target);
 }
 
 export function is_float(type: TypeTag): boolean {

@@ -9,6 +9,7 @@ import {
   Program,
   SVMFunction,
   CompileTimeContext,
+  Instruction,
 } from "./compiler";
 import { print, Result } from "../utils";
 import {
@@ -41,6 +42,11 @@ import {
 import { Rust2CompileTimeEvaluator } from "./rust2_compile_time_evaluator";
 import OpCodes from "./opcodes";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
+import { PreBuiltFunctions } from "../preamble/preamble";
+
+const instruction_to_string = (instruction: Instruction) => {
+  return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
+};
 
 const VALID_UNARY_OPERATORS = new Map([
   ["!", OpCodes.NOTG],
@@ -978,7 +984,7 @@ class Rust2InstructionCompiler
     ctx: Function_applicationContext,
     function_name: string,
   ): InstructionCompilerOutput {
-    const instructions = [];
+    const instructions: Instructions = [];
 
     if (function_name === "println!") {
       // Load the arguments to the stack
@@ -1012,11 +1018,75 @@ class Rust2InstructionCompiler
       };
     }
 
+    if (function_name === "thread_spawn") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "thread_spawn takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      const maybe_compiled_argument = this.visitExpression(expr[0]);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+
+      // Closure is created
+      // NEWC -> NEWT 2 -> GOTO 3 -> CALL -> ENDT
+      instructions.push(...maybe_compiled_argument.value.instructions);
+      instructions.push({ opcode: OpCodes.NEWT, operands: [2] });
+      instructions.push({ opcode: OpCodes.GOTO, operands: [3] });
+      instructions.push({ opcode: OpCodes.CALL, operands: [0] });
+      instructions.push({ opcode: OpCodes.ENDT, operands: [] });
+
+      // At the end; thread_id is pushed to the stack
+      return {
+        ok: true,
+        value: {
+          max_stack_size: maybe_compiled_argument.value.max_stack_size,
+          instructions,
+        },
+      };
+    }
+
+    if (function_name === "thread_join") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "thread_join takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      const maybe_compiled_argument = this.visitExpression(expr[0]);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+
+      instructions.push(...maybe_compiled_argument.value.instructions);
+      instructions.push({ opcode: OpCodes.JOIN, operands: [] });
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: maybe_compiled_argument.value.max_stack_size,
+          instructions,
+        },
+      };
+    }
+
     return {
       ok: false,
       error: new CompilerError(
         ctx.start.line,
-        `Function ${function_name} not found in environment. This is a Validator error.`,
+        `Pre-built function ${function_name} is not implemented in the Compiler.`,
       ),
     };
   }
@@ -1032,11 +1102,21 @@ class Rust2InstructionCompiler
       function_name,
     );
 
-    if (maybe_lookup_success === undefined) {
+    if (
+      maybe_lookup_success === undefined &&
+      PreBuiltFunctions.has(function_name)
+    ) {
       // Function not found in environment --> Function must originate from
       // compile-time context (i.e. a built-in function)
-
       return this.compile_built_in_function(ctx, function_name);
+    } else if (maybe_lookup_success === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          `Function ${function_name} not found in environment but not a built-in function. This is a Validator error.`,
+        ),
+      };
     }
 
     const instructions = [];

@@ -14,7 +14,7 @@ import {
   Scope,
   printScopes,
   TypeAnnotation,
-  value_to_type,
+  value_to_type_tag,
   PrimitiveTypeTag,
 } from "./types";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
@@ -30,6 +30,7 @@ import {
   Closure_parameter_listContext,
   ClosureContext,
 } from "../grammars/Rust2Parser";
+import { PreBuiltFunctions } from "../preamble/preamble";
 
 const null_type = new TypeAnnotation(PrimitiveTypeTag.empty);
 
@@ -68,11 +69,16 @@ class DeclarationRuleValidator
     this.print_fn("Visiting program -> Initialising scope");
     this.scope = [new Map()];
 
-    add_to_scope(
-      this.scope,
-      "println!",
-      new TypeAnnotation(PrimitiveTypeTag.function, "<...> -> ()"),
-    );
+    console.log("Number of prebuilt functions", PreBuiltFunctions.size);
+    for (const [function_name, function_data] of PreBuiltFunctions.entries()) {
+      console.log(
+        "Registering prebuilt function",
+        function_name,
+        function_data.type,
+      );
+      add_to_scope(this.scope, function_name, function_data.type);
+    }
+
     return this.visitChildren(ctx);
   }
 
