@@ -868,7 +868,7 @@ M[OpCodes.STLG] = () => {
     F = HEAP_GET_ADDRESS(F)
   }
   A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0]
-  A = HEAP_SET_ENV_VALUE(ENV, A, PEEK(OS, 0))
+  A = HEAP_SET_ENV_VALUE(ENV, A, OS.pop())
   PC = PC + 1
 }
 
@@ -915,7 +915,7 @@ M[OpCodes.STPG] = () => {
     F = HEAP_GET_ADDRESS(F)
   }
   A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0]
-  A = HEAP_SET_ENV_VALUE(ENV, A, PEEK(OS, 0))
+  A = HEAP_SET_ENV_VALUE(ENV, A, OS.pop())
   PC = PC + 1
 }
 
