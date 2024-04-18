@@ -27,9 +27,7 @@ Other characteristics of closures include:
 
 Notes:
 
-- In `Rust2`, closures cannot take in parameters. This differs from `Rust` where closures can take in parameters.
 - In `Rust2`, closures must have an explicitly declared return type. This differs from `Rust` where the return type can be inferred.
-- In `Rust2`, closures _cannot_ be bound to names.
 
 ## Mutability
 

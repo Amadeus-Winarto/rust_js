@@ -318,13 +318,18 @@ class TypeProducer
     const is_mutable = ctx.mutable().text !== "";
 
     const maybe_type = ctx.type();
-    const type = new TypeAnnotation(
+    const type =
       maybe_type === undefined
-        ? to_eager(expression_type.value.type)
-        : value_to_type(maybe_type.text),
-      undefined,
-      is_mutable,
-    );
+        ? new TypeAnnotation(
+            to_eager(expression_type.value.type),
+            expression_type.value.value,
+            is_mutable,
+          )
+        : new TypeAnnotation(
+            value_to_type(maybe_type.text),
+            expression_type.value.value,
+            is_mutable,
+          );
 
     if (!is_promotable(expression_type.value.type, type.type)) {
       return {

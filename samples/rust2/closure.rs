@@ -1,7 +1,7 @@
 fn main() -> () {
-    || -> i32 {
-        let a: i32 = 5;
-        let b: i32 = 3;
+    let add = |a: i32, b: i32| -> i32 {
         return a + b;
     };
+
+    add(3, 5);
 }

@@ -240,6 +240,8 @@ class Rust2InstructionCompiler
   language_version: string = "Rust2";
 
   private environments: Environment[] = [];
+  private closures: SVMFunction[] = [];
+  private num_top_level_functions: number = 0;
 
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
@@ -249,6 +251,14 @@ class Rust2InstructionCompiler
   ) {
     super();
     this.print_fn = print(debug_mode);
+  }
+
+  setNumTopLevelFunctions(num: number): void {
+    this.num_top_level_functions = num;
+  }
+
+  getClosures(): SVMFunction[] {
+    return this.closures;
   }
 
   setEnvironments(envs: Environment[]): void {
@@ -860,32 +870,53 @@ class Rust2InstructionCompiler
     // Compile the parameters
     const func_parameters =
       ctx.closure_parameter_list().parameters()?.parameter() || [];
-    if (func_parameters.length > 0) {
-      return {
-        ok: false,
-        error: new CompilerError(
-          ctx.start.line,
-          "Closure parameters are not supported yet.",
-        ),
-      };
+    const parameter_env = new Environment();
+    for (let i = 0; i < func_parameters.length; i++) {
+      const param_name = func_parameters[i].IDENTIFIER().text;
+      const param_type = func_parameters[i].type().text;
+      parameter_env.push(param_name, param_type);
     }
 
     // Compile the function body
+    this.environments.push(parameter_env);
     const fn_body = ctx.function_body();
-    const body_instrs = this.visitFunction_body(fn_body);
-
-    // Remove the parameter environment
+    const maybe_compiled_function = this.visitFunction_body(fn_body);
     this.environments.pop();
-
-    if (!body_instrs.ok) {
-      return body_instrs;
+    if (!maybe_compiled_function.ok) {
+      return maybe_compiled_function;
     }
+
+    // Count number of declarations
+    const num_declarations = fn_body
+      .block()
+      .statement()
+      .filter(
+        (x) =>
+          x.constant_declaration() !== undefined ||
+          x.variable_declaration() !== undefined,
+      ).length;
+    const function_instructions = maybe_compiled_function.value;
+
+    // Store the function object
+    const function_obj: SVMFunction = {
+      stack_size: function_instructions.max_stack_size,
+      environment_size: func_parameters.length + num_declarations,
+      num_args: func_parameters.length,
+      instructions: function_instructions.instructions,
+    };
+    const closure_address = this.closures.length;
+    this.closures.push(function_obj);
 
     return {
       ok: true,
       value: {
-        max_stack_size: body_instrs.value.max_stack_size,
-        instructions: body_instrs.value.instructions,
+        max_stack_size: 1,
+        instructions: [
+          {
+            opcode: OpCodes.NEWC,
+            operands: [this.num_top_level_functions + closure_address],
+          },
+        ],
       },
     };
   }
@@ -1273,8 +1304,6 @@ export class Rust2Compiler
   }
 
   visitProgram(ctx: ProgramContext): CompilerOutput {
-    // TODO: Compile predeclared functions
-
     // Hoist all constant declarations
     const const_decls = ctx
       .program_element()
@@ -1324,6 +1353,7 @@ export class Rust2Compiler
         }); // Store the closure in the environment
       }
     }
+    this.instruction_compiler.setNumTopLevelFunctions(this.functions.length);
 
     // Look for entry point
     const maybe_entry_point = this.function_env.lookup("main");
@@ -1399,6 +1429,10 @@ export class Rust2Compiler
         function_obj.instructions = function_instructions.instructions;
       }
     }
+
+    // Add all closures to the top-level function environment
+    const closures = this.instruction_compiler.getClosures();
+    this.functions = this.functions.concat(closures);
 
     // Print values
     if (this.debug_mode) {
