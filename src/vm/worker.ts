@@ -987,8 +987,6 @@ M[OpCodes.RETG] = () => {
     ENV = HEAP_GET_CALL_FRAME_ENV(H)
     P = HEAP_GET_CALL_FRAME_P(H)
     FN = HEAP_GET_CALL_FRAME_FN(H)
-  } else {
-    PC = PC - 1
   }
 }
 
