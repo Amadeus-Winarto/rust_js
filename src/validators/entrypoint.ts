@@ -5,7 +5,8 @@ import { print } from "../utils";
 
 export class EntrypointValidator
   extends AbstractParseTreeVisitor<boolean>
-  implements Validator {
+  implements Validator
+{
   rule_name: string = "Entrypoint";
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 

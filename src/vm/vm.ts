@@ -226,13 +226,18 @@ function init_syscall_port(port: MessagePort) {
 }
 
 // heapSize is the number of bytes for heap
-function INITIALIZE(heapSize: number, p: Program, numOfWorkers: number, output: HTMLInputElement) {
+function INITIALIZE(
+  heapSize: number,
+  p: Program,
+  numOfWorkers: number,
+  output: HTMLInputElement,
+) {
   // initialize heap
   HEAP = new DataView(new SharedArrayBuffer(heapSize));
 
   // initialize workers
   for (let i = 0; i < numOfWorkers; i++) {
-    const worker = new Worker(new URL('./worker.ts', import.meta.url));
+    const worker = new Worker(new URL("./worker.ts", import.meta.url));
     const workerId = i;
 
     const threadChannel = new MessageChannel();
@@ -246,8 +251,8 @@ function INITIALIZE(heapSize: number, p: Program, numOfWorkers: number, output: 
     );
 
     displayChannel.port1.onmessage = (message) => {
-      output.value += message.data.join("") + "\n"
-    }
+      output.value += message.data.join("") + "\n";
+    };
 
     init_thread_port(workerId, threadChannel.port1);
     init_syscall_port(syscallChannel.port1);
@@ -300,7 +305,7 @@ export function runWithProgram(
   p: Program,
   heapSize: number,
   numOfWorkers: number,
-  output: HTMLInputElement
+  output: HTMLInputElement,
 ) {
   INITIALIZE(heapSize, p, numOfWorkers, output);
 

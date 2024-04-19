@@ -581,9 +581,9 @@ class Rust2InstructionCompiler
           parent_index === 0
             ? { opcode: OpCodes.LDLG, operands: [index] }
             : {
-              opcode: OpCodes.LDPG,
-              operands: [index, parent_index],
-            },
+                opcode: OpCodes.LDPG,
+                operands: [index, parent_index],
+              },
         ],
       },
     };
@@ -1078,7 +1078,7 @@ class Rust2InstructionCompiler
           error: new CompilerError(
             ctx.start.line,
             function_name +
-            " takes exactly one argument. This is a Validator error.",
+              " takes exactly one argument. This is a Validator error.",
           ),
         };
       }
@@ -1394,9 +1394,9 @@ class Rust2InstructionCompiler
       parent_index === 0
         ? { opcode: OpCodes.LDLG, operands: [index] }
         : {
-          opcode: OpCodes.LDPG,
-          operands: [index, parent_index],
-        },
+            opcode: OpCodes.LDPG,
+            operands: [index, parent_index],
+          },
     );
 
     // Load the arguments to the stack
@@ -1574,7 +1574,8 @@ class Rust2InstructionCompiler
 
 export class Rust2Compiler
   extends AbstractParseTreeVisitor<CompilerOutput>
-  implements Compiler {
+  implements Compiler
+{
   language_version: string = "Rust2";
 
   private instruction_compiler: Rust2InstructionCompiler;

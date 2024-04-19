@@ -1144,17 +1144,17 @@ M[OpCodes.UNLOCK] = () => {
 };
 
 M[OpCodes.DISPLAY] = () => {
-  A = P[PC][CALL_ARITY_OFFSET]
-  let res: any[] = []
+  A = P[PC][CALL_ARITY_OFFSET];
+  let res: any[] = [];
   for (let i = 0; i < A; i++) {
-    res.push(convertToJsFormat(OS.pop()))
+    res.push(convertToJsFormat(OS.pop()));
   }
-  res = res.reverse()
-  DISPLAY_PORT.postMessage(res)
-  console.log(...res)
-  NEW_UNDEFINED()
-  OS.push(RES)
-  PC = PC + 1
+  res = res.reverse();
+  DISPLAY_PORT.postMessage(res);
+  console.log(...res);
+  NEW_UNDEFINED();
+  OS.push(RES);
+  PC = PC + 1;
 };
 
 // Expects index of function in FUNC of new thread to be in A
@@ -1279,7 +1279,7 @@ const PROGRAM_IDX = 2;
 
 const THREAD_PORT_IDX = 0;
 const SYSCALL_PORT_IDX = 1;
-const DISPLAY_PORT_IDX = 2
+const DISPLAY_PORT_IDX = 2;
 
 const THREAD_IDX = 0;
 const TIME_QUANTA_IDX = 1;
@@ -1292,7 +1292,7 @@ let THREAD_PORT: MessagePort;
 let SYSCALL_PORT: MessagePort;
 
 // Worker will send strings to be displayed
-let DISPLAY_PORT: MessagePort
+let DISPLAY_PORT: MessagePort;
 
 // First message to worker
 self.onmessage = (message) => {
@@ -1306,7 +1306,7 @@ self.onmessage = (message) => {
     data[PROGRAM_IDX],
     ports[THREAD_PORT_IDX],
     ports[SYSCALL_PORT_IDX],
-    ports[DISPLAY_PORT_IDX]
+    ports[DISPLAY_PORT_IDX],
   );
 };
 
@@ -1316,7 +1316,7 @@ function INITIALIZE(
   p: Program,
   thread_port: MessagePort,
   syscall_port: MessagePort,
-  display_port: MessagePort
+  display_port: MessagePort,
 ) {
   // Initialize heap
   HEAP = heap;
@@ -1330,7 +1330,7 @@ function INITIALIZE(
   // Initialize ports for message passing between worker and vm
   THREAD_PORT = thread_port;
   SYSCALL_PORT = syscall_port;
-  DISPLAY_PORT = display_port
+  DISPLAY_PORT = display_port;
 
   ENTRY = p[0];
   FUNC = p[1];
