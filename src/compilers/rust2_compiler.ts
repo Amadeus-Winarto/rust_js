@@ -1492,10 +1492,6 @@ class Rust2InstructionCompiler
 
     // Pop the environment
     if (num_declarations > 0) {
-      instructions.push({ opcode: OpCodes.POPENV, operands: [] });
-      this.environments.pop();
-      this.lock_data_mapping_stack.pop();
-
       const locks_in_scope = this.lock_guard_stack.pop();
       if (locks_in_scope === undefined) {
         return {
@@ -1507,6 +1503,9 @@ class Rust2InstructionCompiler
         };
       }
       instructions.push(...reverse_in_group(locks_in_scope as Instructions, 2));
+      instructions.push({ opcode: OpCodes.POPENV, operands: [] });
+      this.environments.pop();
+      this.lock_data_mapping_stack.pop();
     }
 
     return {
