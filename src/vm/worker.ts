@@ -892,11 +892,13 @@ M[OpCodes.STLG] = () => {
   A = [0, P[PC][LD_ST_VALUE_IDX_OFFSET]];
   B = [HEAP_GET_NUM_CHILD(ENV) - 1, P[PC][LD_ST_VALUE_IDX_OFFSET]];
   F = HEAP_GET_ENV_VALUE(ENV, B);
+  console.log("STLG", B)
   while (IS_ADDRESS(F)) {
     A = [HEAP_GET_ADDRESS_FRAME_IDX(F), HEAP_GET_ADDRESS_VALUE_IDX(F)];
     F = HEAP_GET_ADDRESS(F);
   }
   A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
+  console.log("STLG", A)
   A = HEAP_SET_ENV_VALUE(ENV, A, OS.pop());
   PC = PC + 1;
 };
@@ -1087,7 +1089,8 @@ M[OpCodes.NEWT] = () => {
 };
 
 M[OpCodes.ENDT] = () => {
-  PC = P.length;
+  EOT = true
+  // PC = P.length;
 };
 
 // Expects thread id to be on top of OS
@@ -1398,6 +1401,9 @@ function RUN_INSTRUCTION() {
   if (FN === ENTRY && P[PC][INS_OPCODE_OFFSET] === OpCodes.RETG) {
     EOT = true;
   } else {
+    console.log("PC", PC)
+    console.log("FUNC", FN)
+    console.log("OS", OS)
     // The microcode should increment PC
     M[P[PC][INS_OPCODE_OFFSET]]();
   }
