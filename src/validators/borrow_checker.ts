@@ -255,6 +255,7 @@ function handle_captured_names_in_expression(
     }
   }
 
+  // Case 4: blocks
   const maybe_block = expression.block();
   if (maybe_block !== undefined) {
     // New block => new scope
@@ -265,6 +266,7 @@ function handle_captured_names_in_expression(
     return captured_list;
   }
 
+  // Case 5: closures
   const maybe_closure = expression.closure();
   if (maybe_closure !== undefined) {
     // New closure => new scope
@@ -276,6 +278,21 @@ function handle_captured_names_in_expression(
     curr_env.pop();
     captured_list.push(...closure_captured_list);
     return captured_list;
+  }
+
+  // Case 6: function applications
+  const maybe_function_application = expression.function_application();
+  if (maybe_function_application !== undefined) {
+    const function_parameters = maybe_function_application.args_list().args();
+    if (function_parameters !== undefined) {
+      for (const function_parameter of function_parameters.expression()) {
+        const parameter_captured_list = handle_captured_names_in_expression(
+          function_parameter,
+          curr_env,
+        );
+        captured_list.push(...parameter_captured_list);
+      }
+    }
   }
 
   return captured_list;

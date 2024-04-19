@@ -40,6 +40,7 @@ import { String_literalContext } from "./Rust2Parser";
 import { String_charactersContext } from "./Rust2Parser";
 import { TypeContext } from "./Rust2Parser";
 import { Primitive_typeContext } from "./Rust2Parser";
+import { Generic_mutex_typeContext } from "./Rust2Parser";
 import { Borrowed_typeContext } from "./Rust2Parser";
 import { Borrowed_mutable_typeContext } from "./Rust2Parser";
 import { Print_macroContext } from "./Rust2Parser";
@@ -323,6 +324,13 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitPrimitive_type?: (ctx: Primitive_typeContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.generic_mutex_type`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitGeneric_mutex_type?: (ctx: Generic_mutex_typeContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.borrowed_type`.

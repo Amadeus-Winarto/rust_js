@@ -87,7 +87,14 @@ string_literal: '"' (string_characters)* '"';
 string_characters: ~( '"' | '\\');
 
 type: primitive_type | borrowed_type | borrowed_mutable_type;
-primitive_type: 'i32' | 'f32' | 'bool' | 'str' | '()';
+primitive_type:
+	'i32'
+	| 'f32'
+	| 'bool'
+	| 'str'
+	| '()'
+	| generic_mutex_type;
+generic_mutex_type: 'Mutex<' type '>';
 borrowed_type: '&' primitive_type | '&' type;
 borrowed_mutable_type: '&mut' primitive_type | '&mut' type;
 

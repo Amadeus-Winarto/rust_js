@@ -353,14 +353,31 @@ class TypeProducer
       maybe_type === undefined
         ? new TypeAnnotation(
             to_eager(expression_type.value.type),
-            expression_type.value.value,
+            undefined,
             is_mutable,
           )
         : new TypeAnnotation(
             value_to_type_tag(maybe_type.text),
-            expression_type.value.value,
+            undefined,
             is_mutable,
           );
+    if (type.type === PrimitiveTypeTag.function) {
+      type.value = expression_type.value.value;
+    } else if (type.type === PrimitiveTypeTag.mutex) {
+      type.value =
+        maybe_type !== undefined
+          ? maybe_type?.text.split("<")[1].split(">")[0] // Either take from the type declaration...
+          : // Or deduce from the expression
+            type_tag_to_value(
+              to_eager(
+                value_to_type_tag(
+                  expression_type.value.value === undefined
+                    ? ""
+                    : expression_type.value.value,
+                ),
+              ),
+            );
+    }
 
     if (!is_promotable(expression_type.value.type, type.type)) {
       return {
@@ -371,6 +388,28 @@ class TypeProducer
         ),
       };
     }
+
+    // TODO: this is for generic types, but for now only Mutex is properly generic
+    if (
+      type.type === PrimitiveTypeTag.mutex &&
+      !is_promotable(
+        value_to_type_tag(
+          expression_type.value.value === undefined
+            ? ""
+            : expression_type.value.value,
+        ),
+        value_to_type_tag(type.value === undefined ? "" : type.value),
+      )
+    ) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `variable '${name}' declared with type ${type.value} but got ${expression_type.value.value}`,
+          ctx.start.line,
+        ),
+      };
+    }
+
     add_to_scope(this.scope, name, type);
     return {
       ok: true,
@@ -1146,6 +1185,71 @@ class TypeProducer
       };
     }
 
+    if (function_name === "mutex_new") {
+      // Expects 1 argument
+      if (maybe_args === undefined || maybe_args.expression().length !== 1) {
+        return {
+          ok: false,
+          error: new TypeError(`mutex_new expects 1 argument`, ctx.start.line),
+        };
+      }
+
+      const arg_type = this.visit(maybe_args.expression(0));
+      if (!arg_type.ok) {
+        return arg_type;
+      }
+
+      // Mutex is owner -> underlying data is mutable from pov of mutex
+      arg_type.value.is_mutable = true;
+
+      // Application of mutex_new yields a Mutex<T>
+      return {
+        ok: true,
+        value: new TypeAnnotation(
+          PrimitiveTypeTag.mutex,
+          type_tag_to_value(arg_type.value.type),
+          false,
+        ),
+      };
+    }
+
+    if (function_name === "lock") {
+      // Expects 1 argument
+      if (maybe_args === undefined || maybe_args.expression().length !== 1) {
+        return {
+          ok: false,
+          error: new TypeError(`mutex_new expects 1 argument`, ctx.start.line),
+        };
+      }
+
+      const arg_type = this.visit(maybe_args.expression(0));
+      if (!arg_type.ok) {
+        return arg_type;
+      }
+
+      console.log("lock arg type: ", arg_type);
+      if (arg_type.value.type !== PrimitiveTypeTag.mutex) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `lock expects a Mutex as an argument`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      // Application of lock yields a mutable reference to the underlying data
+      const underlying_data_type_tag = value_to_type_tag(
+        arg_type.value.value !== undefined ? arg_type.value.value : "",
+      );
+      return {
+        ok: true,
+        value: new TypeAnnotation(
+          make_mutable_reference(underlying_data_type_tag),
+        ),
+      };
+    }
+
     return {
       ok: false,
       error: new TypeError(
@@ -1381,7 +1485,6 @@ class TypeProducer
     this.moved_scope.push([]);
 
     // Check function body
-    const curr_block_results = this.block_results.length;
     const body_results = this.visit(ctx.function_body());
     if (!body_results.ok) {
       return body_results;

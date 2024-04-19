@@ -19,7 +19,9 @@ export enum PrimitiveTypeTag {
   integer_literal = "integer",
   float_literal = "float",
 
+  // Concurrency-related types. Consider them as primitive for now
   join_handle = "JoinHandle",
+  mutex = "Mutex",
 
   unit = "unit", // Represents correctly typed programs but the exact type is not needed
   unknown = "unknown",
@@ -110,14 +112,20 @@ function value_to_primitive_type_tag(value: string): TypeTag {
   if (value === "()") {
     return PrimitiveTypeTag.empty;
   }
-  if (value === "integer_literal") {
+  if (value === "integer") {
     return PrimitiveTypeTag.integer_literal;
   }
-  if (value === "float_literal") {
+  if (value === "float") {
     return PrimitiveTypeTag.float_literal;
   }
   if (value === "...") {
     return PrimitiveTypeTag.unit;
+  }
+  if (value === "JoinHandle") {
+    return PrimitiveTypeTag.join_handle;
+  }
+  if (value === "Mutex") {
+    return PrimitiveTypeTag.mutex;
   }
   return PrimitiveTypeTag.unknown;
 }
@@ -127,6 +135,8 @@ export function value_to_type_tag(value: string): TypeTag {
     return new Reference(new Mutable(value_to_type_tag(value.slice(4).trim())));
   } else if (value.startsWith("&")) {
     return new Reference(value_to_type_tag(value.slice(1)));
+  } else if (value.includes("<") && value.includes(">")) {
+    return value_to_primitive_type_tag(value.split("<")[0]);
   } else {
     return value_to_primitive_type_tag(value);
   }

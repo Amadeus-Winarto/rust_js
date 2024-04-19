@@ -27,6 +27,21 @@ export const PreBuiltFunctions: Map<FunctionName, FunctionData> = new Map([
       type: new TypeAnnotation(PrimitiveTypeTag.function, "<JoinHandle> -> ()"),
     },
   ],
+  [
+    "mutex_new",
+    {
+      type: new TypeAnnotation(PrimitiveTypeTag.function, "<T> -> Mutex<T>"),
+    },
+  ],
+  [
+    "lock",
+    {
+      type: new TypeAnnotation(
+        PrimitiveTypeTag.function,
+        "<Mutex<T>> -> &mut T",
+      ),
+    },
+  ],
 ]);
 
 export function is_prebuilt_function(name: string): boolean {
