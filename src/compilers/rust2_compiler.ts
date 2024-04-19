@@ -239,6 +239,24 @@ function compile_conditional(
   };
 }
 
+function reverse_in_group(instructions: Instructions, group_size: number) {
+  // Chunk based on group_size
+  const chunks = [];
+  for (let i = 0; i < instructions.length; i += group_size) {
+    chunks.push(instructions.slice(i, i + group_size));
+  }
+
+  // Reverse the chunks
+  chunks.reverse();
+
+  // Flatten the chunks
+  return chunks.flat();
+}
+
+type LockIndex = number; // address to the variable that points to the lock
+type DataIndex = number; // address of the data that the lock is protecting
+type LockDataMappping = Map<LockIndex, DataIndex>;
+
 class Rust2InstructionCompiler
   extends AbstractParseTreeVisitor<InstructionCompilerOutput>
   implements RustVisitor<InstructionCompilerOutput>
@@ -248,6 +266,12 @@ class Rust2InstructionCompiler
   private environments: Environment[] = [];
   private closures: SVMFunction[] = [];
   private num_top_level_functions: number = 0;
+  private data_index: number | undefined;
+  private lock_data_mapping_stack: LockDataMappping[] = [];
+
+  private lock_guard_stack: Instructions[] = [];
+  private lock_guard_index: number[] = [];
+  private num_threads_to_join: number = 0;
 
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
@@ -456,6 +480,15 @@ class Rust2InstructionCompiler
       { opcode: OpCodes.STLG, operands: [index] },
       { opcode: OpCodes.LGCU, operands: [] }, // Result of evaluating a declaration is `undefined`
     ]);
+
+    if (this.data_index !== undefined) {
+      // Variable must be a lock since there is a data_index
+      this.lock_data_mapping_stack[this.lock_data_mapping_stack.length - 1].set(
+        index,
+        this.data_index,
+      );
+      this.data_index = undefined;
+    }
 
     return {
       ok: true,
@@ -883,11 +916,18 @@ class Rust2InstructionCompiler
       parameter_env.push(param_name, param_type);
     }
 
+    // Save lock guard stack limit
+    this.lock_guard_index.push(this.lock_guard_stack.length);
+
     // Compile the function body
     this.environments.push(parameter_env);
+    this.lock_guard_stack.push([]);
+    this.lock_data_mapping_stack.push(new Map());
     const fn_body = ctx.function_body();
     const maybe_compiled_function = this.visitFunction_body(fn_body);
     this.environments.pop();
+    this.lock_data_mapping_stack.pop();
+    this.lock_guard_stack.pop();
     if (!maybe_compiled_function.ok) {
       return maybe_compiled_function;
     }
@@ -912,6 +952,9 @@ class Rust2InstructionCompiler
     };
     const closure_address = this.closures.length;
     this.closures.push(function_obj);
+
+    // Remove saved lock guard stack limit
+    this.lock_guard_index.pop();
 
     return {
       ok: true,
@@ -949,6 +992,15 @@ class Rust2InstructionCompiler
     if (!results.ok) {
       return results;
     }
+
+    const limit = this.lock_guard_index[this.lock_guard_index.length - 1];
+    for (let i = this.lock_guard_stack.length - 1; i >= limit; i--) {
+      const lock_guards = this.lock_guard_stack[i];
+      for (const lock_guard of reverse_in_group(lock_guards, 2)) {
+        results.value.instructions.push(lock_guard);
+      }
+    }
+
     results.value.instructions.push({ opcode: OpCodes.RETG, operands: [] });
     return results;
   }
@@ -1018,14 +1070,15 @@ class Rust2InstructionCompiler
       };
     }
 
-    if (function_name === "thread_spawn") {
+    if (function_name === "thread_spawn" || function_name === "scope_spawn") {
       const expr = ctx.args_list().args()?.expression();
       if (expr === undefined || expr.length !== 1) {
         return {
           ok: false,
           error: new CompilerError(
             ctx.start.line,
-            "thread_spawn takes exactly one argument. This is a Validator error.",
+            function_name +
+              " takes exactly one argument. This is a Validator error.",
           ),
         };
       }
@@ -1039,11 +1092,20 @@ class Rust2InstructionCompiler
       // NEWC -> NEWT 2 -> GOTO 3 -> CALL -> ENDT
       instructions.push(...maybe_compiled_argument.value.instructions);
       instructions.push({ opcode: OpCodes.NEWT, operands: [2] });
-      instructions.push({ opcode: OpCodes.GOTO, operands: [3] });
+      instructions.push({ opcode: OpCodes.GOTO, operands: [4] });
+      instructions.push({ opcode: OpCodes.POPG, operands: [] });
       instructions.push({ opcode: OpCodes.CALL, operands: [0] });
       instructions.push({ opcode: OpCodes.ENDT, operands: [] });
 
       // At the end; thread_id is pushed to the stack
+      if (function_name === "scope_spawn") {
+        // Compiler is responsible for joining the threads correctly
+        this.num_threads_to_join += 1;
+
+        // scope_spawn pushes the thread_id to the stack --> We don't want to pop it
+        // so we push undefined to the stack
+        instructions.push({ opcode: OpCodes.LGCU, operands: [] });
+      }
       return {
         ok: true,
         value: {
@@ -1077,6 +1139,209 @@ class Rust2InstructionCompiler
         ok: true,
         value: {
           max_stack_size: maybe_compiled_argument.value.max_stack_size,
+          instructions,
+        },
+      };
+    }
+
+    if (function_name === "mutex_new") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "thread_join takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      // Compile the expression
+      const maybe_compiled_expression = this.visitExpression(expr[0]);
+      if (!maybe_compiled_expression.ok) {
+        return maybe_compiled_expression;
+      }
+      const compiled_expression = maybe_compiled_expression.value;
+      instructions.push(...compiled_expression.instructions);
+
+      // Store the value into a variable
+      const current_env = this.environments[this.environments.length - 1];
+
+      // Safe: the name "->data" is an invalid variable name so it will never conflict
+      const data_index = current_env.push("->data", "i32"); // We don't actually care about the type here
+      this.data_index = data_index;
+      instructions.push({ opcode: OpCodes.STLG, operands: [data_index] });
+
+      // Create a lock
+      instructions.push({ opcode: OpCodes.NEWL, operands: [] });
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: compiled_expression.max_stack_size + 1,
+          instructions,
+        },
+      };
+    }
+
+    if (function_name === "scoped_threads") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "scoped_threads takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      const prev_num_threads_to_join = this.num_threads_to_join;
+
+      // Scoped threads takes in a closure, but we treat it as a block
+      const block_ctx = expr[0].closure()?.function_body()?.block();
+      if (block_ctx === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "scoped_threads takes in a closure that is compiled like a block.",
+          ),
+        };
+      }
+
+      const maybe_compiled_argument = this.visitBlock(block_ctx);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+      // Throw away the value of the block
+      instructions.push({
+        opcode: OpCodes.POPG,
+        operands: [],
+      });
+
+      const num_threads_to_join =
+        this.num_threads_to_join - prev_num_threads_to_join;
+      this.num_threads_to_join = prev_num_threads_to_join;
+
+      for (let i = 0; i < num_threads_to_join; i++) {
+        instructions.push({ opcode: OpCodes.JOIN, operands: [] });
+      }
+      instructions.push({ opcode: OpCodes.LGCU, operands: [] });
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: maybe_compiled_argument.value.max_stack_size,
+          instructions:
+            maybe_compiled_argument.value.instructions.concat(instructions),
+        },
+      };
+    }
+
+    if (function_name === "lock") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "lock takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      // Compile the expression
+      const maybe_compiled_expression = this.visitExpression(expr[0]);
+      if (!maybe_compiled_expression.ok) {
+        return maybe_compiled_expression;
+      }
+      const compiled_expression = maybe_compiled_expression.value;
+      instructions.push(...compiled_expression.instructions);
+
+      // Lock the mutex
+      instructions.push({ opcode: OpCodes.LOCK, operands: [] });
+
+      // Expression type has to be a lock: either this.data_index
+      // is protected...
+      if (this.data_index !== undefined) {
+        instructions.push({
+          opcode: OpCodes.LDPA,
+          operands: [this.data_index, 0], // Load address of protected data
+        });
+      } else {
+        // ...or, we can look up the protected data
+        const load_instr = compiled_expression.instructions.at(-1);
+        if (
+          load_instr?.opcode !== OpCodes.LDPG &&
+          load_instr?.opcode !== OpCodes.LDLG
+        ) {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "Last instruction is not a load instruction! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        const parent_env_index =
+          load_instr.opcode === OpCodes.LDLG ? 0 : load_instr.operands[1];
+        if (typeof parent_env_index !== "number") {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "parent_env_index is not a number! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        const lock_index = load_instr.operands[0];
+        // Error if lock_index is not a number
+        if (typeof lock_index !== "number") {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "lock_index is not a number! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        const data_index =
+          this.lock_data_mapping_stack[
+            this.lock_data_mapping_stack.length - 1 - parent_env_index
+          ].get(lock_index);
+        if (data_index === undefined) {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "data_index is undefined! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        instructions.push({
+          opcode: OpCodes.LDPA,
+          operands: [data_index, parent_env_index],
+        });
+
+        // Register the lock guard
+        this.lock_guard_stack[this.lock_guard_stack.length - 1].push(
+          load_instr,
+        );
+        this.lock_guard_stack[this.lock_guard_stack.length - 1].push({
+          opcode: OpCodes.UNLOCK,
+          operands: [],
+        });
+      }
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: compiled_expression.max_stack_size + 1,
           instructions,
         },
       };
@@ -1182,6 +1447,8 @@ class Rust2InstructionCompiler
     // Create a new environment
     if (num_declarations > 0) {
       this.environments.push(new Environment());
+      this.lock_guard_stack.push([]);
+      this.lock_data_mapping_stack.push(new Map());
       instructions.push({
         opcode: OpCodes.NEWENV,
         operands: [num_declarations],
@@ -1227,6 +1494,19 @@ class Rust2InstructionCompiler
     if (num_declarations > 0) {
       instructions.push({ opcode: OpCodes.POPENV, operands: [] });
       this.environments.pop();
+      this.lock_data_mapping_stack.pop();
+
+      const locks_in_scope = this.lock_guard_stack.pop();
+      if (locks_in_scope === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "Locks in scope is undefined. This is a Compiler bug.",
+          ),
+        };
+      }
+      instructions.push(...reverse_in_group(locks_in_scope as Instructions, 2));
     }
 
     return {
@@ -1533,7 +1813,7 @@ export class Rust2Compiler
         console.log("Num args: ", this.functions[i].num_args);
         console.log("Instructions: ");
         for (const instr of this.functions[i].instructions) {
-          console.log("\t", OpCodes[instr.opcode], instr.operands);
+          console.log("\t", instruction_to_string(instr));
         }
       }
     }

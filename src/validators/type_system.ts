@@ -1227,7 +1227,6 @@ class TypeProducer
         return arg_type;
       }
 
-      console.log("lock arg type: ", arg_type);
       if (arg_type.value.type !== PrimitiveTypeTag.mutex) {
         return {
           ok: false,
@@ -1247,6 +1246,62 @@ class TypeProducer
         value: new TypeAnnotation(
           make_mutable_reference(underlying_data_type_tag),
         ),
+      };
+    }
+
+    if (function_name === "scope_spawn" || function_name === "scoped_threads") {
+      // Argument to scope_spawn must be a closure that takes no arguments and
+      // returns nothing
+      if (maybe_args === undefined) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `scope_spawn expects a closure as an argument`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      const args = maybe_args.expression();
+      if (args.length !== 1) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `scope_spawn expects a closure as an argument`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      const maybe_closure = this.visit(args[0]);
+      if (!maybe_closure.ok) {
+        return maybe_closure;
+      }
+      const argument_type = maybe_closure.value;
+
+      if (argument_type.type !== PrimitiveTypeTag.function) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `scope_spawn expects a closure as an argument`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      if (argument_type.value !== "<> -> ()") {
+        return {
+          ok: false,
+          error: new TypeError(
+            `scope_spawn expects a closure that takes no arguments and returns nothing`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      return {
+        ok: true,
+        value: new TypeAnnotation(PrimitiveTypeTag.empty),
       };
     }
 

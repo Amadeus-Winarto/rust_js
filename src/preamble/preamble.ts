@@ -42,6 +42,24 @@ export const PreBuiltFunctions: Map<FunctionName, FunctionData> = new Map([
       ),
     },
   ],
+  [
+    "scoped_threads",
+    {
+      type: new TypeAnnotation(
+        PrimitiveTypeTag.function,
+        "<<...> -> ()> -> ()",
+      ),
+    },
+  ],
+  [
+    "scope_spawn",
+    {
+      type: new TypeAnnotation(
+        PrimitiveTypeTag.function,
+        "<<...> -> ()> -> ()",
+      ),
+    },
+  ],
 ]);
 
 export function is_prebuilt_function(name: string): boolean {

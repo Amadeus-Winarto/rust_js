@@ -69,13 +69,7 @@ class DeclarationRuleValidator
     this.print_fn("Visiting program -> Initialising scope");
     this.scope = [new Map()];
 
-    console.log("Number of prebuilt functions", PreBuiltFunctions.size);
     for (const [function_name, function_data] of PreBuiltFunctions.entries()) {
-      console.log(
-        "Registering prebuilt function",
-        function_name,
-        function_data.type,
-      );
       add_to_scope(this.scope, function_name, function_data.type);
     }
 

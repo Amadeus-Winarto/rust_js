@@ -3,7 +3,10 @@ import { Validator } from "./types";
 import { print, Result } from "../utils";
 import { ErrorNode } from "antlr4ts/tree/ErrorNode";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
-import { ProgramContext } from "../grammars/Rust2Parser";
+import {
+  Function_applicationContext,
+  ProgramContext,
+} from "../grammars/Rust2Parser";
 import { SyntaxError } from "./utils/errors";
 
 class SyntaxRuleValidator
@@ -12,6 +15,7 @@ class SyntaxRuleValidator
 {
   rule_name: string = "Syntax";
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
+  private scoped_threads: number = 0;
 
   constructor(debug_mode: boolean) {
     super();
@@ -50,6 +54,29 @@ class SyntaxRuleValidator
           " is not allowed",
       ),
     };
+  }
+
+  visitFunction_application(ctx: Function_applicationContext): Result<boolean> {
+    this.print_fn("Visiting function_application");
+    const function_name = ctx.function_name().text;
+    if (function_name === "scoped_threads") {
+      // Inside scoped_threads context -> safe to call scope_spawn
+      this.scoped_threads++;
+      const results = this.visitChildren(ctx);
+      this.scoped_threads--;
+      return results;
+    }
+
+    if (function_name === "scope_spawn" && this.scoped_threads === 0) {
+      return {
+        ok: false,
+        error: new SyntaxError(
+          ctx.start.line,
+          "scope_spawn cannot be called outside of context defined by scoped_threads",
+        ),
+      };
+    }
+    return this.visitChildren(ctx);
   }
 }
 
