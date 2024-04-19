@@ -6,6 +6,7 @@ import {
   BlockContext,
   Constant_declarationContext,
   ExpressionContext,
+  Function_applicationContext,
   Immutable_refed_nameContext,
   Mutable_refed_nameContext,
   ProgramContext,
@@ -33,6 +34,7 @@ type LenderInfo = {
 
 type LenderScope = Map<string, BorrowInfo>;
 type BorrowerScope = Map<string, LenderInfo>;
+type MovedScope = string[];
 
 function recursive_lookup<T>(
   scopes: Map<string, T>[],
@@ -47,12 +49,53 @@ function recursive_lookup<T>(
   return undefined;
 }
 
+function restore_scopes(
+  borrower_scopes: BorrowerScope[],
+  lender_scopes: LenderScope[],
+  moved_scopes: MovedScope[],
+): boolean {
+  const last_borrow_scope = borrower_scopes.pop();
+
+  if (last_borrow_scope !== undefined) {
+    const lender_infos = Array.from(last_borrow_scope.entries()).map(
+      ([_, value]) => value,
+    );
+    for (const lender_info of lender_infos) {
+      const maybe_lender_info = recursive_lookup(
+        lender_scopes,
+        lender_info.lender_name,
+      );
+      if (maybe_lender_info === undefined) {
+        return false;
+      }
+
+      const [scope_index, borrow_info] = maybe_lender_info;
+      if (lender_info.type === "immutable") {
+        lender_scopes[scope_index].set(lender_info.lender_name, {
+          immutable_borrow: borrow_info.immutable_borrow - 1,
+          any_mutable_borrow: borrow_info.any_mutable_borrow,
+        });
+      } else if (lender_info.type === "mutable") {
+        lender_scopes[scope_index].set(lender_info.lender_name, {
+          immutable_borrow: borrow_info.immutable_borrow,
+          any_mutable_borrow: false,
+        });
+      }
+    }
+  }
+
+  lender_scopes.pop();
+  moved_scopes.pop();
+  return true;
+}
+
 class BorrowChecker
   extends AbstractParseTreeVisitor<Result<boolean>>
   implements RustVisitor<Result<boolean>>
 {
   private lender_scopes: LenderScope[] = [new Map()];
   private borrower_scopes: BorrowerScope[] = [new Map()];
+  private moved_scopes: MovedScope[] = [];
   private lender_info: LenderInfo | undefined;
 
   defaultResult(): Result<boolean> {
@@ -81,45 +124,32 @@ class BorrowChecker
   visitBlock(ctx: BlockContext): Result<boolean> {
     this.lender_scopes.push(new Map());
     this.borrower_scopes.push(new Map());
+    this.moved_scopes.push([]);
+
     const result = this.visitChildren(ctx);
-    const last_borrow_scope = this.borrower_scopes.pop();
-
-    if (last_borrow_scope !== undefined) {
-      const lender_infos = Array.from(last_borrow_scope.entries()).map(
-        ([_, value]) => value,
-      );
-      for (const lender_info of lender_infos) {
-        const maybe_lender_info = recursive_lookup(
-          this.lender_scopes,
-          lender_info.lender_name,
-        );
-        if (maybe_lender_info === undefined) {
-          return {
-            ok: false,
-            error: new BorrowCheckerError(
-              `Variable ${lender_info.lender_name} not found in lender scopes. This is likely a BorrowChecker bug.`,
-              ctx.start.line,
-            ),
-          };
-        }
-
-        const [scope_index, borrow_info] = maybe_lender_info;
-        if (lender_info.type === "immutable") {
-          this.lender_scopes[scope_index].set(lender_info.lender_name, {
-            immutable_borrow: borrow_info.immutable_borrow - 1,
-            any_mutable_borrow: borrow_info.any_mutable_borrow,
-          });
-        } else if (lender_info.type === "mutable") {
-          this.lender_scopes[scope_index].set(lender_info.lender_name, {
-            immutable_borrow: borrow_info.immutable_borrow,
-            any_mutable_borrow: false,
-          });
-        }
-      }
+    if (!result.ok) {
+      return result;
     }
 
-    this.lender_scopes.pop();
-    return result;
+    const restoration_result = restore_scopes(
+      this.borrower_scopes,
+      this.lender_scopes,
+      this.moved_scopes,
+    );
+    if (!restoration_result) {
+      return {
+        ok: false,
+        error: new BorrowCheckerError(
+          `Failed to restore scopes. This is likely a BorrowChecker bug.`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value: true,
+    };
   }
 
   visitVariable_declaration(ctx: Variable_declarationContext): Result<boolean> {
@@ -128,6 +158,8 @@ class BorrowChecker
     if (!rhs_result.ok) {
       return rhs_result;
     }
+
+    // TODO: if RHS is a re
 
     const name = ctx.var_name().text;
     const current_lender_scope =
@@ -195,6 +227,12 @@ class BorrowChecker
     const block = ctx.block();
     if (block) {
       return this.visitBlock(block);
+    }
+
+    // Case 3: function_application
+    const function_application = ctx.function_application();
+    if (function_application) {
+      return this.visitFunction_application(function_application);
     }
 
     return {
@@ -422,6 +460,57 @@ class BorrowChecker
         "Refed name not recognized. This is a Validator bug.",
         ctx.start.line,
       ),
+    };
+  }
+
+  visitFunction_application(ctx: Function_applicationContext): Result<boolean> {
+    const maybe_function_parameters = ctx.args_list().args();
+    if (maybe_function_parameters === undefined) {
+      return {
+        ok: true,
+        value: true,
+      };
+    }
+
+    const function_parameter_exprs = maybe_function_parameters.expression();
+    if (function_parameter_exprs.length === 0) {
+      return {
+        ok: true,
+        value: true,
+      };
+    }
+
+    // Create scope for function parameters
+    this.lender_scopes.push(new Map());
+    this.borrower_scopes.push(new Map());
+
+    // Evaluate function parameters
+    for (const function_parameter_expr of function_parameter_exprs) {
+      const result = this.visitExpression(function_parameter_expr);
+      if (!result.ok) {
+        return result;
+      }
+    }
+
+    // Remove scope for function parameters
+    const restoration_result = restore_scopes(
+      this.borrower_scopes,
+      this.lender_scopes,
+      this.moved_scopes,
+    );
+    if (!restoration_result) {
+      return {
+        ok: false,
+        error: new BorrowCheckerError(
+          `Failed to restore scopes. This is likely a BorrowChecker bug.`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    return {
+      ok: true,
+      value: true,
     };
   }
 }

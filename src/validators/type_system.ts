@@ -114,12 +114,18 @@ type BlockResults = {
   block_type: TypeAnnotation;
   return_type: TypeAnnotation;
 };
+type MovedScope = string[];
+
+function is_moved(moved_scopes: MovedScope[], name: string): boolean {
+  return moved_scopes.some((scope) => scope.includes(name));
+}
 
 class TypeProducer
   extends AbstractParseTreeVisitor<Result<TypeAnnotation>>
   implements RustVisitor<Result<TypeAnnotation>>
 {
   private scope: Scope[] = [];
+  private moved_scope: MovedScope[] = [];
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
   private return_types: TypeAnnotation[][] = [];
   private block_results: BlockResults[] = [];
@@ -155,6 +161,7 @@ class TypeProducer
   visitProgram(ctx: ProgramContext): Result<TypeAnnotation> {
     this.print_fn("Checking program type");
     this.scope = [new Map()];
+    this.moved_scope = [new Array()];
 
     // Initialise with common types and functions
     for (const [function_name, function_data] of PreBuiltFunctions.entries()) {
@@ -215,6 +222,7 @@ class TypeProducer
   visitBlock(ctx: BlockContext): Result<TypeAnnotation> {
     this.print_fn("Checking block type: ", ctx.text);
     this.scope.push(new Map());
+    this.moved_scope.push([]);
     this.return_types.push([]);
 
     // Check all statements
@@ -264,6 +272,7 @@ class TypeProducer
     const curr_block_type: Result<TypeAnnotation> =
       maybe_expr === undefined ? empty_type : this.visit(maybe_expr);
     this.scope.pop();
+    this.moved_scope.pop();
 
     if (!curr_block_type.ok) {
       return curr_block_type;
@@ -312,6 +321,26 @@ class TypeProducer
     const expression_type = this.visitExpression(ctx.expression());
     if (!expression_type.ok) {
       return expression_type;
+    }
+
+    // Check if expression is a name with type borrow
+    if (
+      ctx.expression().name() !== undefined &&
+      is_borrow(expression_type.value.type)
+    ) {
+      // Register the name as moved
+      const name = ctx.expression().name()?.text;
+      if (name === undefined) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `variable declaration has no name. This is a Parser bug!`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      this.moved_scope[this.moved_scope.length - 1].push(name);
     }
 
     const name = ctx.var_name().text;
@@ -396,6 +425,7 @@ class TypeProducer
     this.print_fn("Adding function ", name, " to scope with type ", type.value);
     add_to_scope(this.scope, name, type);
     this.scope.push(new Map());
+    this.moved_scope.push([]);
 
     // Register parameters in current scope
     const parameter_names: string[] = [];
@@ -411,6 +441,7 @@ class TypeProducer
       add_to_scope(this.scope, parameter_names[i], parameter_types[i]);
     }
     this.scope.push(new Map());
+    this.moved_scope.push([]);
 
     // Check function body
     const body_results = this.visit(ctx.function_body());
@@ -419,6 +450,7 @@ class TypeProducer
     }
 
     this.scope.pop();
+    this.moved_scope.pop();
 
     // Inspect block results
     const final_block = this.block_results[this.block_results.length - 1];
@@ -586,6 +618,13 @@ class TypeProducer
       };
     }
 
+    if (is_moved(this.moved_scope, name)) {
+      return {
+        ok: false,
+        error: new TypeError(`use of moved value '${name}'`, line_number),
+      };
+    }
+
     return {
       ok: true,
       value: maybe_type,
@@ -682,6 +721,24 @@ class TypeProducer
             ctx.start.line,
           ),
         };
+      }
+
+      const arg_name = args[i].name()?.text;
+      if (arg_name !== undefined) {
+        if (is_moved(this.moved_scope, arg_name)) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `use of moved value '${args[i].name()?.text}'`,
+              ctx.start.line,
+            ),
+          };
+        }
+
+        if (is_borrow(arg_types[i])) {
+          // Register the name as moved
+          this.moved_scope[this.moved_scope.length - 1].push(arg_name);
+        }
       }
     }
 
@@ -1290,6 +1347,7 @@ class TypeProducer
       parameter_type + " -> " + return_type,
     );
     this.scope.push(new Map());
+    this.moved_scope.push([]);
 
     // Register parameters in current scope
     const parameter_names: string[] = [];
@@ -1305,6 +1363,7 @@ class TypeProducer
       add_to_scope(this.scope, parameter_names[i], parameter_types[i]);
     }
     this.scope.push(new Map());
+    this.moved_scope.push([]);
 
     // Check function body
     const curr_block_results = this.block_results.length;
@@ -1313,6 +1372,7 @@ class TypeProducer
       return body_results;
     }
     this.scope.pop();
+    this.moved_scope.pop();
 
     // Inspect block results
     const final_block = this.block_results[this.block_results.length - 1];
