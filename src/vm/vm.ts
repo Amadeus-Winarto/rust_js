@@ -40,7 +40,7 @@ const threadChannels: Map<WorkerId, MessageChannel> = new Map();
 const syscallChannels: Map<WorkerId, MessageChannel> = new Map();
 
 let scheduler: Scheduler;
-let FREE: Uint32Array = new Uint32Array(new SharedArrayBuffer(4));
+let FREE: Uint32Array;
 let HEAP: DataView;
 
 // sets up message handlers for thread related messages from workers
@@ -172,7 +172,7 @@ function init_syscall_port(port: MessagePort) {
         Atomics.notify(buf, 0, 1);
         break;
       case Syscall.LOCK:
-        const threadId: ThreadId = message.data[1];
+        const tid: ThreadId = message.data[1];
         lockId = message.data[2];
         buf = message.data[3];
         lock = locks.get(lockId);
@@ -182,7 +182,7 @@ function init_syscall_port(port: MessagePort) {
           );
         } else {
           if (lock.locked) {
-            lock.queue.push(threadId);
+            lock.queue.push(tid);
             Atomics.store(buf, 0, LOCK_NOT_ACQUIRED);
             Atomics.notify(buf, 0, 1);
           } else {
@@ -233,6 +233,7 @@ function INITIALIZE(
   output: HTMLInputElement,
 ) {
   // initialize heap
+  FREE = new Uint32Array(new SharedArrayBuffer(4));
   HEAP = new DataView(new SharedArrayBuffer(heapSize));
 
   // initialize workers
@@ -275,6 +276,14 @@ function SHUT_DOWN_MACHINE() {
   for (const w of workers.values()) {
     w.terminate();
   }
+  idleWorkers.length = 0
+  threadChannels.clear()
+  syscallChannels.clear()
+  workers.clear()
+  threads.clear()
+  locks.clear()
+  joinThreads.clear()
+  maxLockId = 0
 }
 
 function RUN_MACHINE() {

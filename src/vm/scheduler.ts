@@ -37,8 +37,9 @@ export class RoundRobinScheduler implements Scheduler {
   }
   // Add unblocked thread to back of ready queue
   unblockThread(threadId: number): void {
-    this._blockedThreads.delete(threadId);
-    this._readyThreads.push(threadId);
+    if (this._blockedThreads.delete(threadId)) {
+      this._readyThreads.push(threadId);
+    }
   }
   // Place thread to back of ready queue
   // Usually called when time quanta for thread has ended
