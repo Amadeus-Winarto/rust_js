@@ -97,15 +97,19 @@ function init_syscall_port(port: MessagePort) {
     let lock: Lock | undefined;
     switch (syscall) {
       case Syscall.CLONE:
-        const FN: number = message.data[1]
-        const PC: number = message.data[2]
-        const ENV: number = message.data[3]
-        const OS: any[] = message.data[4]
-        buf = message.data[5]
-        const id = scheduler.createThread()
+        const FN: number = message.data[1];
+        const PC: number = message.data[2];
+        const ENV: number = message.data[3];
+        const OS: any[] = message.data[4];
+        buf = message.data[5];
+        const id = scheduler.createThread();
         const thread: Thread = {
-          ID: id, FN: FN, PC: PC,
-          ENV: ENV, OS: OS, RTS: [],
+          ID: id,
+          FN: FN,
+          PC: PC,
+          ENV: ENV,
+          OS: OS,
+          RTS: [],
           RS: {
             A: 0,
             B: 0,
