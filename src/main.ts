@@ -146,3 +146,25 @@ document.getElementById("runBtn")?.addEventListener("click", runCode);
 
 //main();
 
+// Enable tabs in textarea
+document.getElementById("editor")?.addEventListener("keydown", function (e) {
+  if (e.key == "Tab") {
+    e.preventDefault();
+    var start = (this as HTMLInputElement).selectionStart;
+    var end = (this as HTMLInputElement).selectionEnd;
+    if (start === null || end === null) {
+      return;
+    }
+
+    // set textarea value to: text before caret + tab + text after caret
+    (this as HTMLInputElement).value =
+      (this as HTMLInputElement).value.substring(0, start) +
+      "\t" +
+      (this as HTMLInputElement).value.substring(end); // Tab as 4 spaces
+
+    // put caret at right position again
+    (this as HTMLInputElement).selectionStart = (
+      this as HTMLInputElement
+    ).selectionEnd = start + 1;
+  }
+});
