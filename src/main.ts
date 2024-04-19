@@ -20,17 +20,24 @@ const instruction_to_string = (instruction: Instruction) => {
   return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
 };
 
-const output = document.getElementById("output") as HTMLInputElement;
+const compiler_output = document.getElementById(
+  "compiler_output",
+) as HTMLInputElement;
+const vm_output = document.getElementById("output") as HTMLInputElement;
 
-export function logToOutput(...message: any) {
+function logToCompilerOutput(...message: any) {
   // Append the new message to the existing content
-  output.value += message + "\n";
+  compiler_output.value += message + "\n";
   // Scroll to the bottom to show the latest message
   // output.scrollTop = output.scrollHeight;
 }
 
-function clearOutput() {
-  output.value = "";
+function clearCompilerOutput() {
+  compiler_output.value = "";
+}
+
+function clearVMOutput() {
+  vm_output.value = "";
 }
 
 let compiled_code: Program | undefined = undefined;
@@ -38,9 +45,7 @@ let compiled_code: Program | undefined = undefined;
 function compileCode() {
   const program_string = (document.getElementById("editor") as HTMLInputElement)
     .value;
-  clearOutput();
-  console.log("Program:");
-  console.log(program_string);
+  clearCompilerOutput();
 
   // Create the lexer and parser
   const inputStream = CharStreams.fromString(program_string);
@@ -52,7 +57,9 @@ function compileCode() {
   parser.removeErrorListeners();
   parser.addErrorListener({
     syntaxError: function (recognizer, offendingSymbol, line, column, msg, e) {
-      logToOutput(`Syntax error at line ${line} column ${column} -> ${msg}`);
+      logToCompilerOutput(
+        `Syntax error at line ${line} column ${column} -> ${msg}`,
+      );
       return;
     },
   });
@@ -68,45 +75,47 @@ function compileCode() {
     new TypeSystemValidator(DEBUG_MODE),
     new BorrowCheckerValidator(DEBUG_MODE),
   ];
-  console.log("Validating...");
+  logToCompilerOutput("Validating...");
   for (const validator of validators) {
     const result = validator.visit(tree);
-    console.log("\t");
-    console.log(validator.rule_name + ":" + result);
+    logToCompilerOutput("\t");
+    logToCompilerOutput(validator.rule_name + ":" + result);
     if (!result) {
-      logToOutput("Validation failed! Open the console for more details.");
+      logToCompilerOutput("Validation failed! ");
       return;
     }
   }
-  console.log("Validation passed!");
-  console.log("");
+  logToCompilerOutput("Validation passed!");
+  logToCompilerOutput("");
 
   // Compile the program
   const compiler = new Rust2Compiler(DEBUG_MODE);
-  console.log("Compiling...");
+  logToCompilerOutput("Compiling...");
   const result = compiler.visit(tree);
   if (!result.ok) {
-    logToOutput(result.error + "Open the console for more details.");
+    logToCompilerOutput(result.error);
     return;
   }
-  console.log("Compilation passed!");
+  logToCompilerOutput("Compilation passed!");
   compiled_code = result.value;
   let program = result.value;
 
-  console.log("Entry function: ", program.entry_point);
-  logToOutput("Functions: ");
+  logToCompilerOutput("Entry function: ", program.entry_point);
+  logToCompilerOutput("Functions: ");
   for (const func of program.functions) {
-    logToOutput("\tStack size: " + func.stack_size);
-    logToOutput("\tEnvironment size: " + func.environment_size);
-    logToOutput("\tNum args: " + func.num_args);
+    logToCompilerOutput("\tStack size: " + func.stack_size);
+    logToCompilerOutput("\tEnvironment size: " + func.environment_size);
+    logToCompilerOutput("\tNum args: " + func.num_args);
 
-    logToOutput("\tInstructions: ");
+    logToCompilerOutput("\tInstructions: ");
     let instr_idx = 0;
     for (const instr of func.instructions) {
-      logToOutput("\t\t" + instr_idx + " : " + instruction_to_string(instr));
+      logToCompilerOutput(
+        "\t\t" + instr_idx + " : " + instruction_to_string(instr),
+      );
       instr_idx++;
     }
-    logToOutput();
+    logToCompilerOutput();
   }
   return;
 }
@@ -115,7 +124,7 @@ document.getElementById("compileBtn")?.addEventListener("click", compileCode);
 
 export function runCode() {
   // clear output window
-  (document.getElementById("output") as HTMLInputElement).value = "";
+  clearVMOutput();
   var heapSize = (document.getElementById("heapSize") as HTMLInputElement)
     .value as unknown as number;
   var numWorkers = (document.getElementById("workers") as HTMLInputElement)
@@ -127,18 +136,19 @@ export function runCode() {
   }
 
   if (compiled_code === undefined) {
-    logToOutput("Compilation failed. Open the console for more details.");
+    logToCompilerOutput("Compilation failed. ");
     return;
   } else {
     console.log("Code compiled successfully!");
   }
 
-  var result = runWithProgram(
+  runWithProgram(
     toProgramArray(compiled_code),
     heapSize,
     numWorkers,
-    output,
+    vm_output,
   );
+
   compiled_code = undefined;
 }
 
