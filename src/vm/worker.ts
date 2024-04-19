@@ -1052,7 +1052,7 @@ M[OpCodes.POPENV] = () => {
 };
 
 M[OpCodes.LDPA] = () => {
-  A = HEAP_GET_NUM_CHILD(ENV) - (P[PC][LD_ST_FRAME_IDX_OFFSET] as number);
+  A = HEAP_GET_NUM_CHILD(ENV) - 1 - (P[PC][LD_ST_FRAME_IDX_OFFSET] as number);
   A = [A, P[PC][LD_ST_VALUE_IDX_OFFSET]];
   A = HEAP_GET_ENV_VALUE(ENV, A);
   A = [P[PC][LD_ST_VALUE_IDX_OFFSET], P[PC][LD_ST_FRAME_IDX_OFFSET], A];
