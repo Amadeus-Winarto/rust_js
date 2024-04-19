@@ -326,7 +326,9 @@ class TypeProducer
     // Check if expression is a name with type borrow
     if (
       ctx.expression().name() !== undefined &&
-      is_borrow(expression_type.value.type)
+      (is_borrow(expression_type.value.type) ||
+        expression_type.value.type === PrimitiveTypeTag.function ||
+        expression_type.value.type === PrimitiveTypeTag.join_handle)
     ) {
       // Register the name as moved
       const name = ctx.expression().name()?.text;
@@ -695,8 +697,39 @@ class TypeProducer
       .map((arg) => (arg.ok ? arg.value.type : PrimitiveTypeTag.unknown))
       .filter((t) => t !== PrimitiveTypeTag.unknown);
 
+    // Check for use after move
+    for (let i = 0; i < parameter_type_tags.length; i++) {
+      const arg_name = args[i].name()?.text;
+      if (arg_name !== undefined) {
+        if (is_moved(this.moved_scope, arg_name)) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `use of moved value '${args[i].name()?.text}'`,
+              ctx.start.line,
+            ),
+          };
+        }
+
+        if (
+          is_borrow(arg_types[i]) ||
+          arg_types[i] === PrimitiveTypeTag.function ||
+          arg_types[i] === PrimitiveTypeTag.join_handle
+        ) {
+          // Register the name as moved
+          this.moved_scope[this.moved_scope.length - 1].push(arg_name);
+        }
+      }
+    }
+
     if (is_prebuilt_function(function_name)) {
-      return this.visitPrebuiltFunction_application(ctx);
+      // Prevent visitPrebuiltFunction_application from checking moved values again
+      const curr_moved = this.moved_scope.pop();
+      this.moved_scope.push([]);
+      const results = this.visitPrebuiltFunction_application(ctx);
+      this.moved_scope.pop();
+      this.moved_scope.push(curr_moved === undefined ? [] : curr_moved);
+      return results;
     }
 
     if (parameter_type_tags.length !== arg_types.length) {
@@ -721,24 +754,6 @@ class TypeProducer
             ctx.start.line,
           ),
         };
-      }
-
-      const arg_name = args[i].name()?.text;
-      if (arg_name !== undefined) {
-        if (is_moved(this.moved_scope, arg_name)) {
-          return {
-            ok: false,
-            error: new TypeError(
-              `use of moved value '${args[i].name()?.text}'`,
-              ctx.start.line,
-            ),
-          };
-        }
-
-        if (is_borrow(arg_types[i])) {
-          // Register the name as moved
-          this.moved_scope[this.moved_scope.length - 1].push(arg_name);
-        }
       }
     }
 
