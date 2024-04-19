@@ -1102,6 +1102,7 @@ M[OpCodes.JOIN] = () => {
     if (G === JOIN_THREAD_NOT_EXITED) {
       STATUS = ThreadStatus.BLOCKED;
     }
+    OS.pop() // pop out closure loaded before calling NEWT
   } else {
     throw Error("Join expects a Thread Id to be on top of OS");
   }

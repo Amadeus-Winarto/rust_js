@@ -108,7 +108,7 @@ function init_syscall_port(port: MessagePort) {
           FN: FN,
           PC: PC,
           ENV: ENV,
-          OS: OS,
+          OS: [...OS, id],
           RTS: [],
           RS: {
             A: 0,
