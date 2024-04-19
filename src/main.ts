@@ -13,59 +13,37 @@ import { TypeSystemValidator } from "./validators/type_system";
 
 import { Rust2Compiler } from "./compilers/rust2_compiler";
 import { OpCodes } from "./compilers/opcodes";
-import { saveJson } from "./utils";
-import { Instruction } from "./compilers/compiler";
+import { saveJson, toProgramArray } from "./utils";
+import { Instruction, Program } from "./compilers/compiler";
 import { BorrowCheckerValidator } from "./validators/borrow_checker";
 
+import { runWithProgram } from './vm/vm'
 const DEBUG_MODE = false;
 const get_basename = (filename: string) => filename.split(/[\\/]/).pop();
 const instruction_to_string = (instruction: Instruction) => {
   return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
 };
 
-async function blocking_input() {
-  if (process.env.npm_config_filename) {
-    return process.env.npm_config_filename;
-  }
+const output = document.getElementById('output') as HTMLInputElement
 
-  let input_string = undefined;
-  let rl = createInterface(process.stdin, process.stdout);
-  rl.question("Enter the filename: ", (input) => {
-    input_string = input;
-  });
-
-  while (input_string === undefined) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  return input_string;
+export function logToOutput(...message: any) {
+  // Append the new message to the existing content
+  output.value += message + "\n";
+  // Scroll to the bottom to show the latest message
+  // output.scrollTop = output.scrollHeight;
 }
 
-function is_file(filename: string): boolean {
-  // Check if file exists
-  if (!existsSync(filename)) {
-    console.error("ERROR: file ", filename, " does not exist");
-    return false;
-  }
-
-  // Check if file is a .rs file
-  return filename.endsWith(".rs");
+function clearOutput() {
+  output.value = ""
 }
 
-// Main function
-async function main() {
-  const input_string = await blocking_input();
-  let is_input_file = false;
-  const program_string = (function () {
-    if (!is_file(input_string)) {
-      console.log("Interpreting input as program string!");
-      return input_string;
-    } else {
-      is_input_file = true;
-      return readFileSync(input_string, "utf8");
-    }
-  })();
+let compiled_code: Program
 
-  console.log("Program:\n ", program_string);
+function compileCode() {
+  const program_string = (document.getElementById('editor') as HTMLInputElement).value
+  clearOutput()
+  logToOutput("Program:")
+  logToOutput(program_string)
 
   // Create the lexer and parser
   const inputStream = CharStreams.fromString(program_string);
@@ -77,8 +55,8 @@ async function main() {
   parser.removeErrorListeners();
   parser.addErrorListener({
     syntaxError: function (recognizer, offendingSymbol, line, column, msg, e) {
-      console.error(`Syntax error at line ${line} column ${column} -> ${msg}`);
-      process.exit(1);
+      logToOutput(`Syntax error at line ${line} column ${column} -> ${msg}`);
+      return
     },
   });
 
@@ -93,34 +71,32 @@ async function main() {
     new TypeSystemValidator(DEBUG_MODE),
     new BorrowCheckerValidator(DEBUG_MODE),
   ];
-  console.log("Validating...");
+  logToOutput("Validating...")
   for (const validator of validators) {
     const result = validator.visit(tree);
-    console.log("\t", validator.rule_name, ":", result);
+    logToOutput("\t")
+    logToOutput(validator.rule_name)
+    logToOutput(":")
+    logToOutput(result)
     if (!result) {
-      console.error("Validation failed!");
-      process.exit(1);
+      logToOutput("Validation failed!")
+      return
     }
   }
-  console.log("Validation passed!");
-  console.log();
+  logToOutput("Validation passed!");
+  logToOutput("")
 
   // Compile the program
   const compiler = new Rust2Compiler(DEBUG_MODE);
-  console.log("Compiling...");
+  logToOutput("Compiling...")
   const result = compiler.visit(tree);
   if (!result.ok) {
-    console.error(result.error);
-    process.exit(1);
+    logToOutput(result.error)
+    return
   }
-  console.log("Compilation passed!");
-  const program = result.value;
-
-  saveJson(
-    program,
-    "output/" +
-      (is_input_file ? get_basename(input_string) + ".json" : "output.json"),
-  );
+  logToOutput("Compilation passed!");
+  compiled_code = result.value
+  let program = result.value
 
   console.log("Program: ");
   console.log("\tEntry function: ", program.entry_point);
@@ -138,7 +114,21 @@ async function main() {
     }
     console.log();
   }
-  process.exit(0);
+  return
 }
 
-main();
+document.getElementById('compileBtn')?.addEventListener('click', compileCode)
+
+export function runCode() {
+  // clear output window
+  (document.getElementById('output') as HTMLInputElement).value = ""
+  var heapSize = (document.getElementById('heapSize') as HTMLInputElement).value as unknown as number
+  var numWorkers = (document.getElementById('workers') as HTMLInputElement).value as unknown as number
+  // Call your runtime system function passing the compiled code
+  var result = runWithProgram(toProgramArray(compiled_code), heapSize, numWorkers, output);
+}
+
+document.getElementById('runBtn')?.addEventListener('click', runCode);
+
+//main();
+

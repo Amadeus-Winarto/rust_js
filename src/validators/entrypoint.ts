@@ -5,8 +5,7 @@ import { print } from "../utils";
 
 export class EntrypointValidator
   extends AbstractParseTreeVisitor<boolean>
-  implements Validator
-{
+  implements Validator {
   rule_name: string = "Entrypoint";
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
@@ -30,7 +29,7 @@ export class EntrypointValidator
       .program_element()
       .map((statement) => statement.function_declaration())
       .filter((function_declaration) => function_declaration !== undefined)
-      .filter((function_ctx) => function_ctx.function_name().text === "main");
+      .filter((function_ctx) => function_ctx!.function_name().text === "main");
 
     if (function_declarations.length === 0) {
       this.print_fn("No main function found");
@@ -48,18 +47,18 @@ export class EntrypointValidator
 
     const main_function_ctx = function_declarations[0];
     const has_no_parameter =
-      main_function_ctx.parameter_list()?.parameters()?.parameter() ===
+      main_function_ctx!.parameter_list()?.parameters()?.parameter() ===
       undefined;
     if (!has_no_parameter) {
       console.error("SyntaxError: main function should not have parameters");
       return false;
     }
 
-    const has_return_type = main_function_ctx.type().text === "()";
+    const has_return_type = main_function_ctx!.type().text === "()";
     if (!has_return_type) {
       console.error(
         "SyntaxError: main function should have return type (). Got ",
-        main_function_ctx.type().text,
+        main_function_ctx!.type().text,
         " instead",
       );
       return false;

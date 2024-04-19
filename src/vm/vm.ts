@@ -226,24 +226,29 @@ function init_syscall_port(port: MessagePort) {
 }
 
 // heapSize is the number of bytes for heap
-function INITIALIZE(heapSize: number, p: Program, numOfWorkers: number) {
+function INITIALIZE(heapSize: number, p: Program, numOfWorkers: number, output: HTMLInputElement) {
   // initialize heap
   HEAP = new DataView(new SharedArrayBuffer(heapSize));
 
   // initialize workers
   for (let i = 0; i < numOfWorkers; i++) {
-    const worker = new Worker("./worker.ts");
+    const worker = new Worker(new URL('./worker.ts', import.meta.url));
     const workerId = i;
 
     const threadChannel = new MessageChannel();
     const syscallChannel = new MessageChannel();
+    const displayChannel = new MessageChannel();
 
     // Worker gets port2, vm gets port1
-    // TODO: Send program to workers
     worker.postMessage(
       [HEAP, FREE, p],
-      [threadChannel.port2, syscallChannel.port2],
+      [threadChannel.port2, syscallChannel.port2, displayChannel.port2],
     );
+
+    displayChannel.port1.onmessage = (message) => {
+      output.value += message.data.join("") + "\n"
+    }
+
     init_thread_port(workerId, threadChannel.port1);
     init_syscall_port(syscallChannel.port1);
 
@@ -295,8 +300,9 @@ export function runWithProgram(
   p: Program,
   heapSize: number,
   numOfWorkers: number,
+  output: HTMLInputElement
 ) {
-  INITIALIZE(heapSize, p, numOfWorkers);
+  INITIALIZE(heapSize, p, numOfWorkers, output);
 
   // create main thread for this program
   const PC: number = 0;

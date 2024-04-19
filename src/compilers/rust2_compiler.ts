@@ -581,9 +581,9 @@ class Rust2InstructionCompiler
           parent_index === 0
             ? { opcode: OpCodes.LDLG, operands: [index] }
             : {
-                opcode: OpCodes.LDPG,
-                operands: [index, parent_index],
-              },
+              opcode: OpCodes.LDPG,
+              operands: [index, parent_index],
+            },
         ],
       },
     };
@@ -1078,7 +1078,7 @@ class Rust2InstructionCompiler
           error: new CompilerError(
             ctx.start.line,
             function_name +
-              " takes exactly one argument. This is a Validator error.",
+            " takes exactly one argument. This is a Validator error.",
           ),
         };
       }
@@ -1394,9 +1394,9 @@ class Rust2InstructionCompiler
       parent_index === 0
         ? { opcode: OpCodes.LDLG, operands: [index] }
         : {
-            opcode: OpCodes.LDPG,
-            operands: [index, parent_index],
-          },
+          opcode: OpCodes.LDPG,
+          operands: [index, parent_index],
+        },
     );
 
     // Load the arguments to the stack
@@ -1574,8 +1574,7 @@ class Rust2InstructionCompiler
 
 export class Rust2Compiler
   extends AbstractParseTreeVisitor<CompilerOutput>
-  implements Compiler
-{
+  implements Compiler {
   language_version: string = "Rust2";
 
   private instruction_compiler: Rust2InstructionCompiler;
@@ -1685,10 +1684,10 @@ export class Rust2Compiler
 
     const initial_instructions: Instructions = [];
     for (const func_decl of function_decls) {
-      const function_name = func_decl.function_name().text;
-      const type = func_decl.type().text;
+      const function_name = func_decl!.function_name().text;
+      const type = func_decl!.type().text;
 
-      const parameter_list = func_decl.parameter_list();
+      const parameter_list = func_decl!.parameter_list();
       const num_args = parameter_list.parameters()?.parameter().length || 0;
 
       // Add to the environment
@@ -1734,9 +1733,9 @@ export class Rust2Compiler
       function_addr++
     ) {
       const func_decl = function_decls[function_addr];
-      const func_body = func_decl.function_body();
+      const func_body = func_decl!.function_body();
       const func_parameters =
-        func_decl.parameter_list().parameters()?.parameter() || [];
+        func_decl!.parameter_list().parameters()?.parameter() || [];
       const parameter_env = new Environment();
 
       // Add parameters to the parameter environment

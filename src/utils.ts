@@ -6,7 +6,7 @@ export const print = (is_debug: boolean) => {
   if (is_debug) {
     return console.log;
   }
-  return () => {};
+  return () => { };
 };
 
 export function in_scope_untyped(scope: Scope[], name: string): boolean {
@@ -76,7 +76,7 @@ type ProgramArray = [
   SVMFunctionArr[], // functions
 ];
 
-function toProgramArray(program: Program): ProgramArray {
+export function toProgramArray(program: Program): ProgramArray {
   if (program.entry_point === undefined) {
     console.error(
       "entry_point is undefined! Temporarily setting to -1, but there is an error in the compiler.",
