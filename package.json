@@ -6,7 +6,7 @@
   "scripts": {
     "gen_parser": "antlr4ts -visitor grammars/Rust2.g4 -o src/",
     "compile": "tsx src/main.ts",
-    "prettier": "npx prettier --write src/**/*.ts",
+    "prettier": "npx prettier --write src/**/*.ts index.html",
     "main": "npx webpack --config webpack.config.js && npx static-handler --cors --coop --coep --corp -p 8080"
   },
   "author": "",

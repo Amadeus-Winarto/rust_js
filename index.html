@@ -1,65 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <style>
-    .main-container {
-      display: flex;
-      height: 100vh;
-    }
+  <head>
+    <style>
+      .main-container {
+        display: flex;
+        height: 100vh;
+      }
 
-    #editor {
-      width: 50%;
-      height: 100%;
-      margin-right: 1%;
-    }
+      #editor {
+        width: 50%;
+        height: 100%;
+        margin-right: 1%;
+      }
 
-    .right-container {
-      width: 50%;
-    }
+      .right-container {
+        width: 50%;
+      }
 
-    .split-container {
-      display: flex;
-      justify-content: space-between;
-      height: calc(100% - 50px); /* Adjust as needed */
-    }
+      .split-container {
+        display: flex;
+        justify-content: space-between;
+        height: calc(100% - 50px); /* Adjust as needed */
+      }
 
-    .split-textarea {
-      width: 49%; /* Slightly less than 50% to account for any padding or margin */
-      height: 100%;
-    }
+      .split-textarea {
+        width: 49%; /* Slightly less than 50% to account for any padding or margin */
+        height: 100%;
+      }
 
-    .button-container {
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
+      .button-container {
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
 
-    .input-box {
-      width: 100px; /* Adjust as needed */
-    }    
-  </style>
-</head>
+      .input-box {
+        width: 100px; /* Adjust as needed */
+      }
+    </style>
+  </head>
 
-<body>
-  <div class="main-container">
-    <textarea id="editor" placeholder="Write your code here..."></textarea>
-    <div class="right-container">
-      <div class="button-container">
-        <button id="compileBtn">Compile</button>
-        <button id="runBtn">Run</button>
-        <label for="heapSize">Heap size (bytes):</label>
-        <input type="number" value="10000" id="heapSize" class="input-box">
-        <label for="numWorkers">Number of Workers:</label>
-        <input type="number" value="1" id="workers" class="input-box">
-      </div>
-      
-      <div class="split-container">
-        <textarea class="split-textarea" id="compiler_output" readonly placeholder="Output of compiler..."></textarea>
-        <textarea class="split-textarea" id="output" readonly placeholder="Output of vm..."></textarea>
+  <body>
+    <div class="main-container">
+      <textarea id="editor" placeholder="Write your code here..."></textarea>
+      <div class="right-container">
+        <div class="button-container">
+          <button id="compileBtn">Compile</button>
+          <button id="runBtn">Run</button>
+          <label for="heapSize">Heap size (bytes):</label>
+          <input type="number" value="10000" id="heapSize" class="input-box" />
+          <label for="numWorkers">Number of Workers:</label>
+          <input type="number" value="1" id="workers" class="input-box" />
+        </div>
+
+        <div class="split-container">
+          <textarea
+            class="split-textarea"
+            id="compiler_output"
+            readonly
+            placeholder="Output of compiler..."
+          ></textarea>
+          <textarea
+            class="split-textarea"
+            id="output"
+            readonly
+            placeholder="Output of vm..."
+          ></textarea>
+        </div>
       </div>
     </div>
-  </div>
-  
-  <script>var exports = {};</script>
-  <script src="./dist/bundle.js"></script>
-</body>
+
+    <script>
+      var exports = {};
+    </script>
+    <script src="./dist/bundle.js"></script>
+  </body>
 </html>
