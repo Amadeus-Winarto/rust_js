@@ -1,6 +1,3 @@
-import { createInterface } from "readline";
-import { existsSync, readFileSync } from "fs";
-
 import { CharStreams, CommonTokenStream } from "antlr4ts";
 import { Rust2Lexer as RustLexer } from "./grammars/Rust2Lexer";
 import { Rust2Parser as RustParser } from "./grammars/Rust2Parser";
@@ -13,18 +10,17 @@ import { TypeSystemValidator } from "./validators/type_system";
 
 import { Rust2Compiler } from "./compilers/rust2_compiler";
 import { OpCodes } from "./compilers/opcodes";
-import { saveJson, toProgramArray } from "./utils";
+import { toProgramArray } from "./utils";
 import { Instruction, Program } from "./compilers/compiler";
 import { BorrowCheckerValidator } from "./validators/borrow_checker";
 
-import { runWithProgram } from './vm/vm'
+import { runWithProgram } from "./vm/vm";
 const DEBUG_MODE = false;
-const get_basename = (filename: string) => filename.split(/[\\/]/).pop();
 const instruction_to_string = (instruction: Instruction) => {
   return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
 };
 
-const output = document.getElementById('output') as HTMLInputElement
+const output = document.getElementById("output") as HTMLInputElement;
 
 export function logToOutput(...message: any) {
   // Append the new message to the existing content
@@ -34,16 +30,17 @@ export function logToOutput(...message: any) {
 }
 
 function clearOutput() {
-  output.value = ""
+  output.value = "";
 }
 
-let compiled_code: Program
+let compiled_code: Program | undefined = undefined;
 
 function compileCode() {
-  const program_string = (document.getElementById('editor') as HTMLInputElement).value
-  clearOutput()
-  logToOutput("Program:")
-  logToOutput(program_string)
+  const program_string = (document.getElementById("editor") as HTMLInputElement)
+    .value;
+  clearOutput();
+  console.log("Program:");
+  console.log(program_string);
 
   // Create the lexer and parser
   const inputStream = CharStreams.fromString(program_string);
@@ -56,7 +53,7 @@ function compileCode() {
   parser.addErrorListener({
     syntaxError: function (recognizer, offendingSymbol, line, column, msg, e) {
       logToOutput(`Syntax error at line ${line} column ${column} -> ${msg}`);
-      return
+      return;
     },
   });
 
@@ -71,64 +68,81 @@ function compileCode() {
     new TypeSystemValidator(DEBUG_MODE),
     new BorrowCheckerValidator(DEBUG_MODE),
   ];
-  logToOutput("Validating...")
+  console.log("Validating...");
   for (const validator of validators) {
     const result = validator.visit(tree);
-    logToOutput("\t")
-    logToOutput(validator.rule_name)
-    logToOutput(":")
-    logToOutput(result)
+    console.log("\t");
+    console.log(validator.rule_name + ":" + result);
     if (!result) {
-      logToOutput("Validation failed!")
-      return
+      logToOutput("Validation failed! Open the console for more details.");
+      return;
     }
   }
-  logToOutput("Validation passed!");
-  logToOutput("")
+  console.log("Validation passed!");
+  console.log("");
 
   // Compile the program
   const compiler = new Rust2Compiler(DEBUG_MODE);
-  logToOutput("Compiling...")
+  console.log("Compiling...");
   const result = compiler.visit(tree);
   if (!result.ok) {
-    logToOutput(result.error)
-    return
+    logToOutput(result.error + "Open the console for more details.");
+    return;
   }
-  logToOutput("Compilation passed!");
-  compiled_code = result.value
-  let program = result.value
+  console.log("Compilation passed!");
+  compiled_code = result.value;
+  let program = result.value;
 
-  console.log("Program: ");
-  console.log("\tEntry function: ", program.entry_point);
-  console.log("\tFunctions: ");
+  console.log("Entry function: ", program.entry_point);
+  logToOutput("Functions: ");
   for (const func of program.functions) {
-    console.log("\t\tStack size: ", func.stack_size);
-    console.log("\t\tEnvironment size: ", func.environment_size);
-    console.log("\t\tNum args: ", func.num_args);
+    logToOutput("\tStack size: " + func.stack_size);
+    logToOutput("\tEnvironment size: " + func.environment_size);
+    logToOutput("\tNum args: " + func.num_args);
 
-    console.log("\t\tInstructions: ");
+    logToOutput("\tInstructions: ");
     let instr_idx = 0;
     for (const instr of func.instructions) {
-      console.log("\t\t\t", instr_idx, " : ", instruction_to_string(instr));
+      logToOutput("\t\t" + instr_idx + " : " + instruction_to_string(instr));
       instr_idx++;
     }
-    console.log();
+    logToOutput();
   }
-  return
+  return;
 }
 
-document.getElementById('compileBtn')?.addEventListener('click', compileCode)
+document.getElementById("compileBtn")?.addEventListener("click", compileCode);
 
 export function runCode() {
   // clear output window
-  (document.getElementById('output') as HTMLInputElement).value = ""
-  var heapSize = (document.getElementById('heapSize') as HTMLInputElement).value as unknown as number
-  var numWorkers = (document.getElementById('workers') as HTMLInputElement).value as unknown as number
+  (document.getElementById("output") as HTMLInputElement).value = "";
+  var heapSize = (document.getElementById("heapSize") as HTMLInputElement)
+    .value as unknown as number;
+  var numWorkers = (document.getElementById("workers") as HTMLInputElement)
+    .value as unknown as number;
   // Call your runtime system function passing the compiled code
-  var result = runWithProgram(toProgramArray(compiled_code), heapSize, numWorkers, output);
+  if (compiled_code === undefined) {
+    console.log("No compiled code found. Compiling...");
+    compileCode();
+  }
+
+  if (compiled_code === undefined) {
+    logToOutput("Compilation failed. Open the console for more details.");
+    return;
+  } else {
+    console.log("Code compiled successfully!");
+  }
+
+  var result = runWithProgram(
+    toProgramArray(compiled_code),
+    heapSize,
+    numWorkers,
+    output,
+  );
+  compiled_code = undefined;
 }
 
-document.getElementById('runBtn')?.addEventListener('click', runCode);
+document.getElementById("runBtn")?.addEventListener("click", runCode);
 
 //main();
 
