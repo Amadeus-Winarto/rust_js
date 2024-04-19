@@ -4,7 +4,9 @@ import { print, Result } from "../utils";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import {
   BlockContext,
+  ClosureContext,
   Constant_declarationContext,
+  Derefed_nameContext,
   ExpressionContext,
   Function_applicationContext,
   Immutable_refed_nameContext,
@@ -13,6 +15,7 @@ import {
   Refed_nameContext,
   Variable_declarationContext,
 } from "../grammars/Rust2Parser";
+import { PreBuiltFunctions } from "../preamble/preamble";
 
 class BorrowCheckerError extends Error {
   constructor(message: string, line_number: number) {
@@ -35,6 +38,60 @@ type LenderInfo = {
 type LenderScope = Map<string, BorrowInfo>;
 type BorrowerScope = Map<string, LenderInfo>;
 type MovedScope = string[];
+type CaptureInfo = string[];
+type CaptureScope = Map<string, CaptureInfo>;
+
+function get_underlying_name_deref(
+  derefed_name_ctx: Derefed_nameContext,
+): string {
+  const maybe_name = derefed_name_ctx.name();
+  if (maybe_name !== undefined) {
+    return maybe_name.text;
+  }
+
+  const maybe_derefed_name = derefed_name_ctx.derefed_name();
+  if (maybe_derefed_name !== undefined) {
+    return get_underlying_name_deref(maybe_derefed_name);
+  }
+  return "Impossible";
+}
+
+function get_underlying_name_ref(refed_name_ctx: Refed_nameContext): string {
+  const maybe_immutable = refed_name_ctx.immutable_refed_name();
+  const maybe_mutable = refed_name_ctx.mutable_refed_name();
+
+  if (maybe_immutable === undefined && maybe_mutable === undefined) {
+    return "Impossible";
+  }
+
+  if (maybe_immutable !== undefined) {
+    const maybe_name = maybe_immutable.name();
+    if (maybe_name !== undefined) {
+      return maybe_name.text;
+    }
+
+    const maybe_refed_name = maybe_immutable.refed_name();
+    if (maybe_refed_name !== undefined) {
+      return get_underlying_name_ref(maybe_refed_name);
+    }
+    return "Impossible";
+  }
+
+  if (maybe_mutable !== undefined) {
+    const maybe_name = maybe_mutable.name();
+    if (maybe_name !== undefined) {
+      return maybe_name.text;
+    }
+
+    const maybe_refed_name = maybe_mutable.refed_name();
+    if (maybe_refed_name !== undefined) {
+      return get_underlying_name_ref(maybe_refed_name);
+    }
+    return "Impossible";
+  }
+
+  return "Impossible";
+}
 
 function recursive_lookup<T>(
   scopes: Map<string, T>[],
@@ -49,10 +106,24 @@ function recursive_lookup<T>(
   return undefined;
 }
 
+function recursive_array_lookup<T>(
+  scopes: T[][],
+  condition: (value: T) => boolean,
+): [number, T] | undefined {
+  for (let i = scopes.length - 1; i >= 0; i--) {
+    const value = scopes[i].find(condition);
+    if (value !== undefined) {
+      return [i, value];
+    }
+  }
+  return undefined;
+}
+
 function restore_scopes(
   borrower_scopes: BorrowerScope[],
   lender_scopes: LenderScope[],
   moved_scopes: MovedScope[],
+  capture_info_scopes: CaptureScope[],
 ): boolean {
   const last_borrow_scope = borrower_scopes.pop();
 
@@ -86,7 +157,128 @@ function restore_scopes(
 
   lender_scopes.pop();
   moved_scopes.pop();
+  capture_info_scopes.pop();
   return true;
+}
+
+function find_captured_names(
+  ctx: BlockContext,
+  curr_env: string[][],
+): string[] {
+  const statements = ctx.statement();
+  const captured_list: string[] = [];
+
+  for (const stmt of statements) {
+    const maybe_variable_declaration = stmt.variable_declaration();
+    if (maybe_variable_declaration !== undefined) {
+      const expr_captured_list = handle_captured_names_in_expression(
+        maybe_variable_declaration.expression(),
+        curr_env,
+      );
+      captured_list.push(...expr_captured_list);
+
+      const var_name = maybe_variable_declaration.var_name().text;
+      curr_env[curr_env.length - 1].push(var_name);
+      continue;
+    }
+
+    const maybe_constant_declaration = stmt.constant_declaration();
+    if (maybe_constant_declaration !== undefined) {
+      const expr_captured_list = handle_captured_names_in_expression(
+        maybe_constant_declaration.expression(),
+        curr_env,
+      );
+      captured_list.push(...expr_captured_list);
+
+      const const_name = maybe_constant_declaration.const_name().text;
+      curr_env[curr_env.length - 1].push(const_name);
+      continue;
+    }
+
+    const maybe_expression = stmt.expression();
+    if (maybe_expression !== undefined) {
+      const expr_captured_list = handle_captured_names_in_expression(
+        maybe_expression,
+        curr_env,
+      );
+      captured_list.push(...expr_captured_list);
+    }
+  }
+  return captured_list;
+}
+
+function handle_captured_names_in_expression(
+  expression: ExpressionContext,
+  curr_env: string[][],
+): string[] {
+  const captured_list: string[] = [];
+
+  // Case 1: name
+  const maybe_name = expression.name();
+  if (maybe_name !== undefined) {
+    const name = maybe_name.text;
+    if (
+      recursive_array_lookup(curr_env, (env) => env.includes(name)) ===
+      undefined
+    ) {
+      // Found captured name
+      captured_list.push(name);
+      return captured_list;
+    }
+  }
+
+  // Case 2: refed_name
+  const maybe_refed_name = expression.refed_name();
+  if (maybe_refed_name !== undefined) {
+    const refed_name = get_underlying_name_ref(maybe_refed_name);
+    if (
+      recursive_array_lookup(curr_env, (env) => env.includes(refed_name)) ===
+      undefined
+    ) {
+      // Found captured name
+      captured_list.push(refed_name);
+      return captured_list;
+    }
+  }
+
+  // Case 3: derefed_name
+  const maybe_derefed_name = expression.derefed_name();
+  if (maybe_derefed_name !== undefined) {
+    const derefed_name = get_underlying_name_deref(maybe_derefed_name);
+    if (
+      recursive_array_lookup(curr_env, (env) => env.includes(derefed_name)) ===
+      undefined
+    ) {
+      // Found captured name
+      captured_list.push(derefed_name);
+      return captured_list;
+    }
+  }
+
+  const maybe_block = expression.block();
+  if (maybe_block !== undefined) {
+    // New block => new scope
+    curr_env.push([]);
+    const block_captured_list = find_captured_names(maybe_block, curr_env);
+    curr_env.pop();
+    captured_list.push(...block_captured_list);
+    return captured_list;
+  }
+
+  const maybe_closure = expression.closure();
+  if (maybe_closure !== undefined) {
+    // New closure => new scope
+    curr_env.push([]);
+    const closure_captured_list = find_captured_names(
+      maybe_closure.function_body().block(),
+      curr_env,
+    );
+    curr_env.pop();
+    captured_list.push(...closure_captured_list);
+    return captured_list;
+  }
+
+  return captured_list;
 }
 
 class BorrowChecker
@@ -97,6 +289,9 @@ class BorrowChecker
   private borrower_scopes: BorrowerScope[] = [new Map()];
   private moved_scopes: MovedScope[] = [];
   private lender_info: LenderInfo | undefined;
+
+  private capture_info: CaptureInfo | undefined;
+  private capture_scopes: CaptureScope[] = [];
 
   defaultResult(): Result<boolean> {
     return {
@@ -121,10 +316,32 @@ class BorrowChecker
     };
   }
 
+  visitClosure(ctx: ClosureContext): Result<boolean> {
+    // First, make sure borrowing rules are followed in the body
+    const result = this.visit(ctx.function_body());
+    if (!result.ok) {
+      return result;
+    }
+
+    // Lookup all names that are captured and save it
+    const curr_env: string[][] = [[]];
+    const captured_names = find_captured_names(
+      ctx.function_body().block(),
+      curr_env,
+    );
+    this.capture_info = captured_names;
+
+    return {
+      ok: true,
+      value: true,
+    };
+  }
+
   visitBlock(ctx: BlockContext): Result<boolean> {
     this.lender_scopes.push(new Map());
     this.borrower_scopes.push(new Map());
     this.moved_scopes.push([]);
+    this.capture_scopes.push(new Map());
 
     const result = this.visitChildren(ctx);
     if (!result.ok) {
@@ -135,6 +352,7 @@ class BorrowChecker
       this.borrower_scopes,
       this.lender_scopes,
       this.moved_scopes,
+      this.capture_scopes,
     );
     if (!restoration_result) {
       return {
@@ -159,13 +377,21 @@ class BorrowChecker
       return rhs_result;
     }
 
-    // TODO: if RHS is a re
-
     const name = ctx.var_name().text;
     const current_lender_scope =
       this.lender_scopes[this.lender_scopes.length - 1];
     const current_borrower_scope =
       this.borrower_scopes[this.borrower_scopes.length - 1];
+
+    // Check if variable is associated with a captured name
+    if (this.capture_info !== undefined) {
+      // Associate this variable with the captured names
+      this.capture_scopes[this.capture_scopes.length - 1].set(
+        ctx.var_name().text,
+        this.capture_info,
+      );
+      this.capture_info = undefined;
+    }
 
     // Variable is declared -> can become a lender
     current_lender_scope.set(name, {
@@ -197,6 +423,16 @@ class BorrowChecker
       this.lender_scopes[this.lender_scopes.length - 1];
     const current_borrower_scope =
       this.borrower_scopes[this.borrower_scopes.length - 1];
+
+    // Check if variable is associated with a captured name
+    if (this.capture_info !== undefined) {
+      // Associate this variable with the captured names
+      this.capture_scopes[this.capture_scopes.length - 1].set(
+        ctx.const_name().text,
+        this.capture_info,
+      );
+      this.capture_info = undefined;
+    }
 
     // Variable is declared -> can become a lender
     current_lender_scope.set(name, {
@@ -233,6 +469,12 @@ class BorrowChecker
     const function_application = ctx.function_application();
     if (function_application) {
       return this.visitFunction_application(function_application);
+    }
+
+    // Case 4: closures
+    const closure = ctx.closure();
+    if (closure) {
+      return this.visitClosure(closure);
     }
 
     return {
@@ -480,9 +722,16 @@ class BorrowChecker
       };
     }
 
+    const function_name = ctx.function_name().text;
+    if (PreBuiltFunctions.has(function_name)) {
+      return this.handle_prebuilt_function(ctx);
+    }
+
     // Create scope for function parameters
     this.lender_scopes.push(new Map());
     this.borrower_scopes.push(new Map());
+    this.moved_scopes.push([]);
+    this.capture_scopes.push(new Map());
 
     // Evaluate function parameters
     for (const function_parameter_expr of function_parameter_exprs) {
@@ -497,6 +746,7 @@ class BorrowChecker
       this.borrower_scopes,
       this.lender_scopes,
       this.moved_scopes,
+      this.capture_scopes,
     );
     if (!restoration_result) {
       return {
@@ -508,6 +758,50 @@ class BorrowChecker
       };
     }
 
+    return {
+      ok: true,
+      value: true,
+    };
+  }
+
+  handle_prebuilt_function(ctx: Function_applicationContext): Result<boolean> {
+    const function_name = ctx.function_name().text;
+
+    if (function_name === "thread_spawn") {
+      const arg_exprs = ctx.args_list().args()?.expression();
+      if (arg_exprs === undefined || arg_exprs.length === 0) {
+        return {
+          ok: false,
+          error: new BorrowCheckerError(
+            `thread_spawn requires at least one argument. This is a Validator bug.`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      // First argument must be a closure
+      const first_arg = arg_exprs[0];
+      const closure_ctx = first_arg.closure();
+      if (closure_ctx !== undefined) {
+        const result = this.visitClosure(closure_ctx);
+        if (!result.ok) {
+          return result;
+        }
+
+        // Check if closure is borrowing any variables
+        const captured_names = this.capture_info;
+        if (captured_names !== undefined && captured_names.length > 0) {
+          return {
+            ok: false,
+            error: new BorrowCheckerError(
+              `closure may outlive the current function, but it borrows ${captured_names} variables`,
+              ctx.start.line,
+            ),
+          };
+        }
+        this.capture_info = undefined;
+      }
+    }
     return {
       ok: true,
       value: true,
