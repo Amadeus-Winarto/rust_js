@@ -29,7 +29,12 @@ expression:
 	| unary_operator expression
 	| function_application
 	| parens_expression
-	| if_expression;
+	| if_expression
+	| loop_expression;
+
+loop_expression: infinite_loop | while_loop;
+infinite_loop: 'loop' block;
+while_loop: 'while' cond_expr block;
 
 refed_name: immutable_refed_name | mutable_refed_name;
 immutable_refed_name: '&' name | '&' refed_name;

@@ -38,6 +38,9 @@ import {
   Derefed_nameContext,
   Immutable_refed_nameContext,
   Mutable_refed_nameContext,
+  Loop_expressionContext,
+  Infinite_loopContext,
+  While_loopContext,
 } from "../grammars/Rust2Parser";
 import { Rust2CompileTimeEvaluator } from "./rust2_compile_time_evaluator";
 import OpCodes from "../common/opcodes";
@@ -719,6 +722,12 @@ class Rust2InstructionCompiler
     const refed_name_ctx = ctx.refed_name();
     if (refed_name_ctx !== undefined) {
       return this.visitRefed_name(refed_name_ctx);
+    }
+
+    // Case 14: loops
+    const loop_ctx = ctx.loop_expression();
+    if (loop_ctx !== undefined) {
+      return this.visitLoop_expression(loop_ctx);
     }
 
     return {
@@ -1634,6 +1643,67 @@ class Rust2InstructionCompiler
         ctx.start.line,
         "Unknown statement. This should not happen.",
       ),
+    };
+  }
+
+  visitLoop_expression(ctx: Loop_expressionContext): InstructionCompilerOutput {
+    return this.visitChildren(ctx);
+  }
+
+  visitInfinite_loop(ctx: Infinite_loopContext): InstructionCompilerOutput {
+    const instructions = [];
+    const block_instructions = this.visitBlock(ctx.block());
+    if (!block_instructions.ok) {
+      return block_instructions;
+    }
+
+    const move_up_by = block_instructions.value.instructions.length;
+    instructions.push(...block_instructions.value.instructions);
+    return {
+      ok: true,
+      value: {
+        max_stack_size: block_instructions.value.max_stack_size,
+        instructions: [
+          ...instructions,
+          { opcode: OpCodes.GOTO, operands: [-move_up_by] },
+        ],
+      },
+    };
+  }
+
+  visitWhile_loop(ctx: While_loopContext): InstructionCompilerOutput {
+    const instructions = [];
+    const cond_expr = this.visit(ctx.cond_expr());
+    if (!cond_expr.ok) {
+      return cond_expr;
+    }
+
+    const block_instructions = this.visitBlock(ctx.block());
+    if (!block_instructions.ok) {
+      return block_instructions;
+    }
+
+    const move_up_by =
+      block_instructions.value.instructions.length +
+      cond_expr.value.instructions.length +
+      2;
+    instructions.push(...cond_expr.value.instructions);
+    instructions.push({
+      opcode: OpCodes.BRF,
+      operands: [move_up_by],
+    });
+    instructions.push(...block_instructions.value.instructions);
+    instructions.push({ opcode: OpCodes.GOTO, operands: [-move_up_by] });
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: Math.max(
+          cond_expr.value.max_stack_size,
+          block_instructions.value.max_stack_size,
+        ),
+        instructions,
+      },
     };
   }
 }

@@ -10,6 +10,8 @@ import {
   Function_declarationContext,
   If_expressionContext,
   Immutable_refed_nameContext,
+  Infinite_loopContext,
+  Loop_expressionContext,
   Mutable_refed_nameContext,
   NameContext,
   Parameter_listContext,
@@ -18,6 +20,7 @@ import {
   Return_expressionContext,
   StatementContext,
   Variable_declarationContext,
+  While_loopContext,
 } from "../grammars/Rust2Parser";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import type { TypeTag } from "./types";
@@ -1100,10 +1103,62 @@ export class TypeProducer
       return this.visitDerefed_name(derefed_name_ctx);
     }
 
+    // Case 14: Loops
+    const loop_ctx = ctx.loop_expression();
+    if (loop_ctx !== undefined) {
+      return this.visitLoop_expression(loop_ctx);
+    }
+
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
       error: new TypeError(`unknown expression type`, ctx.start.line),
+    };
+  }
+
+  visitLoop_expression(ctx: Loop_expressionContext): Result<TypeAnnotation> {
+    return this.visitChildren(ctx);
+  }
+
+  visitInfinite_loop(ctx: Infinite_loopContext): Result<TypeAnnotation> {
+    // Check the block
+    const result = this.visit(ctx.block());
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
+    };
+  }
+
+  visitWhile_loop(ctx: While_loopContext): Result<TypeAnnotation> {
+    // Check the condition
+    const condition = this.visit(ctx.cond_expr());
+    if (!condition.ok) {
+      return condition;
+    }
+
+    if (!is_bool(condition.value.type)) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `while loop condition expects boolean type but got ${condition.value.type}`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    // Check the block
+    const result = this.visit(ctx.block());
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
     };
   }
 

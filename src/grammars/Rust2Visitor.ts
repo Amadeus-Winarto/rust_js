@@ -11,6 +11,9 @@ import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
+import { Loop_expressionContext } from "./Rust2Parser";
+import { Infinite_loopContext } from "./Rust2Parser";
+import { While_loopContext } from "./Rust2Parser";
 import { Refed_nameContext } from "./Rust2Parser";
 import { Immutable_refed_nameContext } from "./Rust2Parser";
 import { Mutable_refed_nameContext } from "./Rust2Parser";
@@ -118,6 +121,27 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitExpression?: (ctx: ExpressionContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.loop_expression`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitLoop_expression?: (ctx: Loop_expressionContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.infinite_loop`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitInfinite_loop?: (ctx: Infinite_loopContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.while_loop`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitWhile_loop?: (ctx: While_loopContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.refed_name`.

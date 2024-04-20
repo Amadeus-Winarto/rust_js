@@ -11,6 +11,9 @@ import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
+import { Loop_expressionContext } from "./Rust2Parser";
+import { Infinite_loopContext } from "./Rust2Parser";
+import { While_loopContext } from "./Rust2Parser";
 import { Refed_nameContext } from "./Rust2Parser";
 import { Immutable_refed_nameContext } from "./Rust2Parser";
 import { Mutable_refed_nameContext } from "./Rust2Parser";
@@ -151,6 +154,39 @@ export interface Rust2Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitExpression?: (ctx: ExpressionContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.loop_expression`.
+   * @param ctx the parse tree
+   */
+  enterLoop_expression?: (ctx: Loop_expressionContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.loop_expression`.
+   * @param ctx the parse tree
+   */
+  exitLoop_expression?: (ctx: Loop_expressionContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.infinite_loop`.
+   * @param ctx the parse tree
+   */
+  enterInfinite_loop?: (ctx: Infinite_loopContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.infinite_loop`.
+   * @param ctx the parse tree
+   */
+  exitInfinite_loop?: (ctx: Infinite_loopContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.while_loop`.
+   * @param ctx the parse tree
+   */
+  enterWhile_loop?: (ctx: While_loopContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.while_loop`.
+   * @param ctx the parse tree
+   */
+  exitWhile_loop?: (ctx: While_loopContext) => void;
 
   /**
    * Enter a parse tree produced by `Rust2Parser.refed_name`.
