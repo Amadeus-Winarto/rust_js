@@ -2,12 +2,12 @@ fn main() -> () {
     let mut counter = 0;
 
     let t0 = thread_spawn(|| -> () {
-        counter = 1;
-        println!("t0: counter = ", counter)
+        let x = &mut counter;
+        *x = *x + 1;
     });
     let t1 = thread_spawn(|| -> () {
-        counter = 2;
-        println!("t1: counter = ", counter)
+        let x = &mut counter;
+        *x = *x + 1;
     });
 
     thread_join(t0);

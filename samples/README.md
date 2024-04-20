@@ -188,4 +188,27 @@ This README is split into two sections: one for each directory. Each section con
     Note:
         - The function `increment` takes a mutable reference to an `i32` and increments the value of the variable by 1.
         - Note that once `increment(b)` is called, the variable `b` is moved into the function `increment`. This is because the function `increment` takes a mutable reference to `b`, and the borrow checker ensures that the variable `b` is not used after the call to `increment(b)`.
-  
+10. `while_loop.rs`
+    Objective:
+        - Demonstrates the use of while loops in our language.
+
+    Note:
+        - The code increments `x` until it reaches 5.
+        - We expect to see the following:
+        ```bash
+        1
+        2
+        3
+        4
+        5
+        ```
+11. `infinite_loop.rs`
+    Objective:
+        - Demonstrates the use of infinite loops in our language.
+
+    Note:
+        - The code should print "I'll Live? " until the VM memory is exhausted.
+12. `loops_with_locks.rs`
+    Objective:
+        - Demonstrates `break` keyword in loops.
+        - Demonstrates interaction between loops and locks in our language.
