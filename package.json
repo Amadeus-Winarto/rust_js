@@ -5,8 +5,9 @@
   "main": "src/main.ts",
   "scripts": {
     "gen_parser": "antlr4ts -visitor grammars/Rust2.g4 -o src/",
-    "compile": "tsx src/main.ts",
     "prettier": "npx prettier --write src/**/*.ts index.html",
+    "watch": "npx webpack --watch",
+    "host": "npx static-handler --cors --coop --coep --corp -p 8080",
     "main": "npx webpack --config webpack.config.js && npx static-handler --cors --coop --coep --corp -p 8080"
   },
   "author": "",

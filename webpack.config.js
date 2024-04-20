@@ -3,6 +3,7 @@ const webpack = require("webpack");
 const MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
 
 module.exports = {
+  mode: "development",
   entry: "./src/main.ts", // Your entry TypeScript file
   plugins: [
     new webpack.ProvidePlugin({
@@ -12,6 +13,7 @@ module.exports = {
       languages: ["javascript", "css", "html", "typescript"], // Add any other languages you want to support
     }),
   ],
+  devtool: "inline-source-map",
   module: {
     rules: [
       {
