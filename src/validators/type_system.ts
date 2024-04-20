@@ -1647,6 +1647,9 @@ export class TypeProducer
     }
     this.scope.pop();
     this.moved_scope.pop();
+
+    this.scope.pop();
+    this.moved_scope.pop();
     this.curr_env_length.pop();
 
     // Inspect block results
