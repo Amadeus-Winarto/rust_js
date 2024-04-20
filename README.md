@@ -1,5 +1,14 @@
 # Rust in TypeScript
 
+## Quick Start
+Visit [here](https://amadeus-winarto.github.io/rust_js/) to see the virtual machine! 
+
+There are some known limitations however: 
+- May not work with Chrome
+- No syntax highlighting
+
+For a (possibly) better experience, you can run the VM locally by following the instructions below. 
+
 ## Dependencies
 
 ### ANTLR4
