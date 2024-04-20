@@ -276,6 +276,7 @@ class Rust2InstructionCompiler
 
   private lock_guard_stack: Instructions[] = [];
   private lock_guard_index: number[] = [];
+  private lock_guard_index_loops: number[] = [];
   private num_threads_to_join: number = 0;
 
   private closure_counter: number = 0;
@@ -782,11 +783,23 @@ class Rust2InstructionCompiler
     const instructions: Instructions = [];
 
     // Lock cleanup: Pop lock guards until the loop lock guard
-    const limit = this.lock_guard_index[this.lock_guard_index.length - 1];
+    const limit =
+      this.lock_guard_index_loops[this.lock_guard_index_loops.length - 1];
     for (let i = this.lock_guard_stack.length - 1; i >= limit; i--) {
       const lock_guards = this.lock_guard_stack[i];
       for (const lock_guard of reverse_in_group(lock_guards, 2)) {
-        instructions.push(lock_guard);
+        const new_instr = {
+          opcode: lock_guard.opcode,
+          operands: [...lock_guard.operands],
+        };
+
+        if (new_instr.opcode === OpCodes.LDPG) {
+          // Need to adjust the operands
+          const curr_operand = new_instr.operands[1] as number;
+          new_instr.operands[1] =
+            curr_operand + (this.lock_guard_stack.length - 1 - i);
+        }
+        instructions.push(new_instr);
       }
     }
 
@@ -990,6 +1003,9 @@ class Rust2InstructionCompiler
     // Treat closure like a block with additional parameter environment
     this.print_fn("Visiting closure");
 
+    // Save lock guard stack limit
+    this.lock_guard_index.push(this.lock_guard_stack.length);
+
     // Compile the parameters
     const func_parameters =
       ctx.closure_parameter_list().parameters()?.parameter() || [];
@@ -1043,6 +1059,9 @@ class Rust2InstructionCompiler
     const closure_address = this.closures.length;
     this.closures.push(function_obj);
 
+    // Remove saved lock guard stack limit
+    this.lock_guard_index.pop();
+
     return {
       ok: true,
       value: {
@@ -1080,11 +1099,23 @@ class Rust2InstructionCompiler
       return results;
     }
 
+    // Lock cleanup: Pop lock guards until the loop lock guard
     const limit = this.lock_guard_index[this.lock_guard_index.length - 1];
     for (let i = this.lock_guard_stack.length - 1; i >= limit; i--) {
       const lock_guards = this.lock_guard_stack[i];
       for (const lock_guard of reverse_in_group(lock_guards, 2)) {
-        results.value.instructions.push(lock_guard);
+        const new_instr = {
+          opcode: lock_guard.opcode,
+          operands: [...lock_guard.operands],
+        };
+
+        if (new_instr.opcode === OpCodes.LDPG) {
+          // Need to adjust the operands
+          const curr_operand = new_instr.operands[1] as number;
+          new_instr.operands[1] =
+            curr_operand + (this.lock_guard_stack.length - 1 - i);
+        }
+        results.value.instructions.push(new_instr);
       }
     }
 
@@ -1544,9 +1575,6 @@ class Rust2InstructionCompiler
     const instructions: Instructions = [];
     this.alloc_counter.push(0);
 
-    // Save lock guard stack limit
-    this.lock_guard_index.push(this.lock_guard_stack.length);
-
     // Count number of declarations
     const num_declarations =
       ctx
@@ -1637,17 +1665,7 @@ class Rust2InstructionCompiler
       instructions.push({ opcode: OpCodes.LGCU, operands: [] });
     }
 
-    const cleanup_target = instructions.length;
-    console.log("cleanup_target", cleanup_target);
-    for (const [index, instr] of instructions.entries()) {
-      if (instr.opcode === OpCodes.GOTO && instr.operands[0] === "TODO") {
-        console.log("Jump to: ", cleanup_target - index + 1);
-        // instr.operands[0] = cleanup_target - index + 1;
-      }
-    }
-
     // Pop the environment
-    let num_protected_data = 0;
     if (num_declarations > 0) {
       const locks_in_scope = this.lock_guard_stack.pop();
       if (locks_in_scope === undefined) {
@@ -1659,7 +1677,6 @@ class Rust2InstructionCompiler
           ),
         };
       }
-      num_protected_data = locks_in_scope.length / 2;
 
       instructions.push(...reverse_in_group(locks_in_scope as Instructions, 2));
       instructions.push({ opcode: OpCodes.POPENV, operands: [] });
@@ -1684,9 +1701,6 @@ class Rust2InstructionCompiler
       }
     }
 
-    // Remove saved lock guard stack limit
-    this.lock_guard_index.pop();
-
     return {
       ok: true,
       value: {
@@ -1701,10 +1715,16 @@ class Rust2InstructionCompiler
     copied_names: string[] = [],
   ): InstructionCompilerOutput {
     this.print_fn("Visiting function_body");
+    // Save lock guard stack limit
+    this.lock_guard_index.push(this.lock_guard_stack.length);
+
     const results = this.visitBlock(ctx.block(), copied_names);
     if (!results.ok) {
       return results;
     }
+
+    // Remove saved lock guard stack limit
+    this.lock_guard_index.pop();
 
     // Block is a value expression. An implicit return is added
     results.value.instructions.push({ opcode: OpCodes.RETG, operands: [] });
@@ -1754,7 +1774,9 @@ class Rust2InstructionCompiler
 
   visitLoop_expression(ctx: Loop_expressionContext): InstructionCompilerOutput {
     this.loop_counter.push(this.environments.length);
+    this.lock_guard_index_loops.push(this.lock_guard_stack.length);
     const results = this.visitChildren(ctx);
+    this.lock_guard_index_loops.pop();
     this.loop_counter.pop();
     return results;
   }

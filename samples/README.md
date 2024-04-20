@@ -213,3 +213,42 @@ This README is split into two sections: one for each directory. Each section con
     Objective:
         - Demonstrates `break` keyword in loops.
         - Demonstrates interaction between loops and locks in our language.
+13. `loop_unlock_break.rs`
+    Objective:
+        - Demonstrates interaction between loops, locks, and `break` in our language.
+
+    Note:
+        - The use of `break` to exit loop complicates the compiler's job. This is because on exit, all locks must be released in the opposite order of acquisition to prevent deadlocks. However, exactly which locks need to be released depends on which scope the `break` is in. This is a challenge for the compiler to track.
+        - Similarly, environments must be deallocated when a `break` is encountered, and the number of deallocations depends on the scope of the `break`.
+        - We expect to see the following:
+        ```bash
+        I'll Live?
+        I'll Live?
+        I'll Live?
+        I'll Live?
+        I'll Live?
+        BREAK!
+        Done!
+        Done!2
+        Guard: 0
+        Done!3
+        ```
+        Note that if the implementation deadlocks, then the last 2 lines will not be printed.
+
+14. `fn_unlock_return.rs`
+    Objective:
+        - Demonstrates interaction between loops, locks, and `return` in our language.
+
+    Note:
+        - This is very similar to `loop_unlock_break.rs` but with `return` instead of `break` since we are dealing with closures. The same challenges apply to the compiler.
+        - The problem with the environment deallocation does not apply since environments are handled by the VM for `RETG` instructions.
+        - We expect to see the following:
+        ```bash
+        I'll Live?
+        RETURN!!
+        Done!
+        Done!2
+        Guard: 0
+        Done!3
+        ```
+        Note that if the implementation deadlocks, then the last 2 lines will not be printed.
