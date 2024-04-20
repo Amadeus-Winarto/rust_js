@@ -117,3 +117,6 @@ NUMBER: DIGIT+;
 IDENTIFIER: LETTER ( LETTER | DIGIT | '_')*;
 fragment LETTER: [a-zA-Z];
 fragment DIGIT: [0-9];
+
+COMMENT: '//' ~('\n'|'\r')* -> skip;
+MULTILINE_COMMENT: '/*' .*? '*/' -> skip;
