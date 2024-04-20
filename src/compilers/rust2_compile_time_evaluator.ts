@@ -51,6 +51,32 @@ export class Rust2CompileTimeEvaluator extends AbstractParseTreeVisitor<
                 };
     }
 
+    // Case 2: Parenthesized expression
+    const parenthesized_ctx = ctx.parens_expression();
+    if (parenthesized_ctx !== undefined) {
+      return this.visitExpression(parenthesized_ctx.expression()!);
+    }
+
+    // Case 3: Expression binop expression
+    const binary_operator_ctx = ctx.binary_operator();
+    if (binary_operator_ctx !== undefined) {
+      const left = this.visitExpression(ctx.expression(0)!);
+      if (!left.ok) {
+        return left;
+      }
+
+      const right = this.visitExpression(ctx.expression(1)!);
+      if (!right.ok) {
+        return right;
+      }
+
+      const operator = binary_operator_ctx.text;
+      return {
+        ok: true,
+        value: eval(`${left.value} ${operator} ${right.value}`),
+      };
+    }
+
     // Disallow all other cases for now
     return {
       ok: false,
