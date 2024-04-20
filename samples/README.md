@@ -166,6 +166,7 @@ This README is split into two sections: one for each directory. Each section con
         counter = 0
         ```
         We see that the main thread's `counter` is not modified by the threads, and the threads each have their own copy of `counter`.
+        - To see the interleaving of the threads, increase `Number of Workers` to more than 1 in the UI. 
 7. `scoped_threads.rs`
     Objective:
         - Demonstrates scoped threads in our language
