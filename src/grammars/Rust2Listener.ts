@@ -21,6 +21,7 @@ import { Derefed_nameContext } from "./Rust2Parser";
 import { AssignmentContext } from "./Rust2Parser";
 import { ClosureContext } from "./Rust2Parser";
 import { Closure_parameter_listContext } from "./Rust2Parser";
+import { Immediate_closure_applicationContext } from "./Rust2Parser";
 import { Parens_expressionContext } from "./Rust2Parser";
 import { If_expressionContext } from "./Rust2Parser";
 import { Cond_exprContext } from "./Rust2Parser";
@@ -264,6 +265,21 @@ export interface Rust2Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitClosure_parameter_list?: (ctx: Closure_parameter_listContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.immediate_closure_application`.
+   * @param ctx the parse tree
+   */
+  enterImmediate_closure_application?: (
+    ctx: Immediate_closure_applicationContext,
+  ) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.immediate_closure_application`.
+   * @param ctx the parse tree
+   */
+  exitImmediate_closure_application?: (
+    ctx: Immediate_closure_applicationContext,
+  ) => void;
 
   /**
    * Enter a parse tree produced by `Rust2Parser.parens_expression`.

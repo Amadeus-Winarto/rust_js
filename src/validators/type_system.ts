@@ -9,6 +9,7 @@ import {
   Function_applicationContext,
   Function_declarationContext,
   If_expressionContext,
+  Immediate_closure_applicationContext,
   Immutable_refed_nameContext,
   Infinite_loopContext,
   Loop_expressionContext,
@@ -773,7 +774,7 @@ export class TypeProducer
       .filter((t) => t !== PrimitiveTypeTag.unknown);
 
     // Check for use after move
-    for (let i = 0; i < parameter_type_tags.length; i++) {
+    for (let i = 0; i < args.length; i++) {
       const arg_name = args[i].name()?.text;
       if (arg_name !== undefined) {
         if (is_moved(this.moved_scope, arg_name)) {
@@ -807,6 +808,7 @@ export class TypeProducer
       return results;
     }
 
+    // Check for arity
     if (parameter_type_tags.length !== arg_types.length) {
       return {
         ok: false,
@@ -817,6 +819,7 @@ export class TypeProducer
       };
     }
 
+    // Check for argument types
     for (let i = 0; i < parameter_type_tags.length; i++) {
       if (
         parameter_type_tags[i] !== arg_types[i] &&
@@ -1109,6 +1112,12 @@ export class TypeProducer
       return this.visitLoop_expression(loop_ctx);
     }
 
+    // Case 15: immediate closure application
+    const immediate_closure_app_ctx = ctx.immediate_closure_application();
+    if (immediate_closure_app_ctx !== undefined) {
+      return this.visitImmediate_closure_application(immediate_closure_app_ctx);
+    }
+
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
@@ -1159,6 +1168,114 @@ export class TypeProducer
     return {
       ok: true,
       value: new TypeAnnotation(PrimitiveTypeTag.empty),
+    };
+  }
+
+  visitImmediate_closure_application(
+    ctx: Immediate_closure_applicationContext,
+  ): Result<TypeAnnotation> {
+    // Check the closure
+    const closure = this.visitClosure(ctx.closure());
+    if (!closure.ok) {
+      return closure;
+    }
+
+    console.log("Closure type: ", closure.value.value);
+    console.log("Closure type tag: ", type_tag_to_value(closure.value.type));
+
+    const function_type_string = closure.value.value;
+    if (function_type_string === undefined) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `closure has no type. This is a TypeValidator bug!`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    const parameter_type_string = function_type_string
+      .split("->")[0]
+      .trim()
+      .slice(1, -1);
+    const return_type_string = function_type_string.split("->")[1].trim();
+
+    const parameter_type_string_arr =
+      parameter_type_string.length === 0
+        ? []
+        : parameter_type_string.split(",");
+
+    const parameter_type_tags = parameter_type_string_arr.map((t) =>
+      value_to_type_tag(t.trim()),
+    );
+    const return_type = value_to_type_tag(return_type_string);
+
+    const maybe_args = ctx.args_list().args()?.expression();
+    const args = maybe_args === undefined ? [] : maybe_args;
+    const annotated_arg_types = args.map((arg) => this.visit(arg));
+    const maybe_error = annotated_arg_types.find((arg) => !arg.ok);
+    if (maybe_error !== undefined) {
+      return maybe_error;
+    }
+    const arg_types = annotated_arg_types
+      .map((arg) => (arg.ok ? arg.value.type : PrimitiveTypeTag.unknown))
+      .filter((t) => t !== PrimitiveTypeTag.unknown);
+
+    // Check for use after move
+    for (let i = 0; i < args.length; i++) {
+      const arg_name = args[i].name()?.text;
+      if (arg_name !== undefined) {
+        if (is_moved(this.moved_scope, arg_name)) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `use of moved value '${args[i].name()?.text}'`,
+              ctx.start.line,
+            ),
+          };
+        }
+
+        if (
+          is_borrow(arg_types[i]) ||
+          arg_types[i] === PrimitiveTypeTag.function ||
+          arg_types[i] === PrimitiveTypeTag.join_handle
+        ) {
+          // Register the name as moved
+          this.moved_scope[this.moved_scope.length - 1].push(arg_name);
+        }
+      }
+    }
+
+    // Check for arity
+    if (parameter_type_tags.length !== arg_types.length) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `closure expects ${parameter_type_tags.length} arguments but got ${arg_types.length}`,
+          ctx.start.line,
+        ),
+      };
+    }
+
+    // Check for argument types
+    for (let i = 0; i < parameter_type_tags.length; i++) {
+      if (
+        parameter_type_tags[i] !== arg_types[i] &&
+        !is_promotable(arg_types[i], parameter_type_tags[i])
+      ) {
+        return {
+          ok: false,
+          error: new TypeError(
+            `type mismatch: closure expects type ${type_tag_to_value(parameter_type_tags[i])} but got ${type_tag_to_value(arg_types[i])} for argument ${i + 1}`,
+            ctx.start.line,
+          ),
+        };
+      }
+    }
+
+    return {
+      ok: true,
+      value: new TypeAnnotation(return_type),
     };
   }
 

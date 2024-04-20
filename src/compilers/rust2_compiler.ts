@@ -41,6 +41,7 @@ import {
   Loop_expressionContext,
   Infinite_loopContext,
   While_loopContext,
+  Immediate_closure_applicationContext,
 } from "../grammars/Rust2Parser";
 import { Rust2CompileTimeEvaluator } from "./rust2_compile_time_evaluator";
 import OpCodes from "../common/opcodes";
@@ -728,6 +729,15 @@ class Rust2InstructionCompiler
     const loop_ctx = ctx.loop_expression();
     if (loop_ctx !== undefined) {
       return this.visitLoop_expression(loop_ctx);
+    }
+
+    // Case 15: immediate_closure_application
+    const immediate_closure_application_ctx =
+      ctx.immediate_closure_application();
+    if (immediate_closure_application_ctx !== undefined) {
+      return this.visitImmediate_closure_application(
+        immediate_closure_application_ctx,
+      );
     }
 
     return {
@@ -1703,6 +1713,43 @@ class Rust2InstructionCompiler
           block_instructions.value.max_stack_size,
         ),
         instructions,
+      },
+    };
+  }
+
+  visitImmediate_closure_application(
+    ctx: Immediate_closure_applicationContext,
+  ): InstructionCompilerOutput {
+    // Compile the closure first
+    const closure_instructions = this.visitClosure(ctx.closure());
+    if (!closure_instructions.ok) {
+      return closure_instructions;
+    }
+
+    // Load the arguments to the stack
+    const args_list = ctx.args_list().args()?.expression() || [];
+    const num_args = args_list.length;
+    for (const argument of ctx.args_list().args()?.expression() || []) {
+      const maybe_compiled_argument = this.visitExpression(argument);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+      closure_instructions.value.instructions.push(
+        ...maybe_compiled_argument.value.instructions,
+      );
+    }
+
+    // Call the closure
+    closure_instructions.value.instructions.push({
+      opcode: OpCodes.CALL,
+      operands: [num_args],
+    });
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: args_list.length + 1,
+        instructions: closure_instructions.value.instructions,
       },
     };
   }

@@ -21,6 +21,7 @@ import { Derefed_nameContext } from "./Rust2Parser";
 import { AssignmentContext } from "./Rust2Parser";
 import { ClosureContext } from "./Rust2Parser";
 import { Closure_parameter_listContext } from "./Rust2Parser";
+import { Immediate_closure_applicationContext } from "./Rust2Parser";
 import { Parens_expressionContext } from "./Rust2Parser";
 import { If_expressionContext } from "./Rust2Parser";
 import { Cond_exprContext } from "./Rust2Parser";
@@ -191,6 +192,15 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitClosure_parameter_list?: (ctx: Closure_parameter_listContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.immediate_closure_application`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitImmediate_closure_application?: (
+    ctx: Immediate_closure_applicationContext,
+  ) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.parens_expression`.

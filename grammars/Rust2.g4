@@ -28,6 +28,7 @@ expression:
 	| expression binary_logical_operator expression
 	| unary_operator expression
 	| function_application
+	| immediate_closure_application
 	| parens_expression
 	| if_expression
 	| loop_expression;
@@ -44,6 +45,7 @@ assignment: (name | derefed_name) '=' expression;
 
 closure: closure_parameter_list '->' type function_body;
 closure_parameter_list: '||' | '|' parameters '|';
+immediate_closure_application: closure args_list;
 
 parens_expression: '(' expression ')';
 if_expression:
@@ -118,5 +120,5 @@ IDENTIFIER: LETTER ( LETTER | DIGIT | '_')*;
 fragment LETTER: [a-zA-Z];
 fragment DIGIT: [0-9];
 
-COMMENT: '//' ~('\n'|'\r')* -> skip;
+COMMENT: '//' ~('\n' | '\r')* -> skip;
 MULTILINE_COMMENT: '/*' .*? '*/' -> skip;
