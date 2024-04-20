@@ -1,9 +1,13 @@
-fn add(x: &i32, y: &i32) -> i32 {
-    *x + *y
+fn increment(x: &mut i32) -> () {
+    *x = *x + 1;
 }
 
 fn main() -> () {
-    let x: i32 = 10;
-    let y: i32 = 20;
-    let z: i32 = add(&x, &y);
+    let mut counter = 0;
+    let b = &mut counter;
+
+    increment(b);
+    println!("Counter: ", counter);
+
+    // increment(b); // Uncommenting this line will cause a compile-time error
 }
