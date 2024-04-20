@@ -43,6 +43,7 @@ import {
   make_mutable_reference,
   is_mutable_borrow,
   is_copyable,
+  is_immutable_borrow,
 } from "./types";
 import { print, add_to_scope, get_type, Result } from "../utils";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
@@ -1685,8 +1686,21 @@ export class TypeProducer
       return name_type;
     }
 
+    if (
+      type_tag_to_value(name_type.value.type) ===
+      type_tag_to_value(make_reference(PrimitiveTypeTag.string))
+    ) {
+      return {
+        ok: false,
+        error: new TypeError(
+          `cannot move a value of type 'str'`,
+          ctx.start.line,
+        ),
+      };
+    }
+
     // Number of dereferences must be less than or equal to the number of references
-    let curr_type_tag = name_type.value.type;
+    let curr_type_tag: TypeTag = name_type.value.type;
     for (let i = num_deref; i > 0; i--) {
       if (!is_borrow(curr_type_tag)) {
         return {
