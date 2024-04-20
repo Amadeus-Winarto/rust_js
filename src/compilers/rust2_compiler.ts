@@ -273,10 +273,13 @@ class Rust2InstructionCompiler
   private lock_guard_index: number[] = [];
   private num_threads_to_join: number = 0;
 
+  private closure_counter: number = 0;
+
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
   constructor(
     private static_context: CompileTimeContext,
+    private closure_map: Map<number, string[]>,
     debug_mode: boolean = false,
   ) {
     super();
@@ -916,6 +919,12 @@ class Rust2InstructionCompiler
       parameter_env.push(param_name, param_type);
     }
 
+    // Copy some names that are captured
+    const closure_id = this.closure_counter;
+    this.closure_counter += 1;
+
+    const copied_names = this.closure_map.get(closure_id)?.slice() || [];
+
     // Save lock guard stack limit
     this.lock_guard_index.push(this.lock_guard_stack.length);
 
@@ -924,7 +933,10 @@ class Rust2InstructionCompiler
     this.lock_guard_stack.push([]);
     this.lock_data_mapping_stack.push(new Map());
     const fn_body = ctx.function_body();
-    const maybe_compiled_function = this.visitFunction_body(fn_body);
+    const maybe_compiled_function = this.visitFunction_body(
+      fn_body,
+      copied_names,
+    );
     this.environments.pop();
     this.lock_data_mapping_stack.pop();
     this.lock_guard_stack.pop();
@@ -1429,20 +1441,24 @@ class Rust2InstructionCompiler
     };
   }
 
-  visitBlock(ctx: BlockContext): InstructionCompilerOutput {
+  visitBlock(
+    ctx: BlockContext,
+    copied_names: string[] = [],
+  ): InstructionCompilerOutput {
     // Block := statement* expression?
     this.print_fn("Visiting block");
 
     const instructions: Instructions = [];
 
     // Count number of declarations
-    const num_declarations = ctx
-      .statement()
-      .filter(
-        (x) =>
-          x.constant_declaration() !== undefined ||
-          x.variable_declaration() !== undefined,
-      ).length;
+    const num_declarations =
+      ctx
+        .statement()
+        .filter(
+          (x) =>
+            x.constant_declaration() !== undefined ||
+            x.variable_declaration() !== undefined,
+        ).length + copied_names.length;
 
     // Create a new environment
     if (num_declarations > 0) {
@@ -1453,6 +1469,40 @@ class Rust2InstructionCompiler
         opcode: OpCodes.NEWENV,
         operands: [num_declarations],
       });
+    }
+
+    // Compile the copied names
+    for (const name of copied_names) {
+      // Look up the name in the environment
+      const maybe_lookup_success = name_recursive_lookup(
+        this.environments,
+        name,
+      );
+      if (maybe_lookup_success === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            `Unknown variable ${name}. This is a ValidatorError!`,
+          ),
+        };
+      }
+
+      const current_env = this.environments[this.environments.length - 1];
+      const current_env_index = current_env.push(name, "i32"); // We don't actually care about the type here
+
+      const [env_index, index] = maybe_lookup_success;
+      const parent_index = this.environments.length - 1 - env_index;
+
+      const load_instr = {
+        opcode: OpCodes.LDPG,
+        operands: [index, parent_index],
+      };
+      const store_instr = {
+        opcode: OpCodes.STLG,
+        operands: [current_env_index],
+      };
+      instructions.push(load_instr, store_instr);
     }
 
     // Compile the statements
@@ -1531,9 +1581,12 @@ class Rust2InstructionCompiler
     };
   }
 
-  visitFunction_body(ctx: Function_bodyContext): InstructionCompilerOutput {
+  visitFunction_body(
+    ctx: Function_bodyContext,
+    copied_names: string[] = [],
+  ): InstructionCompilerOutput {
     this.print_fn("Visiting function_body");
-    const results = this.visitBlock(ctx.block());
+    const results = this.visitBlock(ctx.block(), copied_names);
     if (!results.ok) {
       return results;
     }
@@ -1598,10 +1651,14 @@ export class Rust2Compiler
   private function_env: Environment = new Environment();
   private functions: RVMFunction[] = [];
 
-  constructor(private debug_mode: boolean) {
+  constructor(
+    private closure_map: Map<number, string[]>, // Map from closure id to the names of the variables it needs to copy
+    private debug_mode: boolean,
+  ) {
     super();
     this.instruction_compiler = new Rust2InstructionCompiler(
       this.constant_env,
+      this.closure_map,
       debug_mode,
     );
     this.compile_time_evaluator = new Rust2CompileTimeEvaluator();

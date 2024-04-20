@@ -27,6 +27,20 @@ export enum PrimitiveTypeTag {
   unknown = "unknown",
 }
 
+export function is_copyable(type: TypeTag): boolean {
+  return (
+    type === PrimitiveTypeTag.i32 ||
+    type === PrimitiveTypeTag.i64 ||
+    type === PrimitiveTypeTag.f32 ||
+    type === PrimitiveTypeTag.f64 ||
+    type === PrimitiveTypeTag.bool ||
+    type === PrimitiveTypeTag.integer_literal ||
+    type === PrimitiveTypeTag.float_literal ||
+    type === PrimitiveTypeTag.unit ||
+    is_immutable_borrow(type)
+  );
+}
+
 class Reference<T extends TypeTag> {
   constructor(public type: T) {}
 }

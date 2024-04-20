@@ -38,6 +38,7 @@ import {
   unwrap_reference,
   make_mutable_reference,
   is_mutable_borrow,
+  is_copyable,
 } from "./types";
 import { print, add_to_scope, get_type, Result } from "../utils";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
@@ -120,7 +121,7 @@ function is_moved(moved_scopes: MovedScope[], name: string): boolean {
   return moved_scopes.some((scope) => scope.includes(name));
 }
 
-class TypeProducer
+export class TypeProducer
   extends AbstractParseTreeVisitor<Result<TypeAnnotation>>
   implements RustVisitor<Result<TypeAnnotation>>
 {
@@ -130,9 +131,18 @@ class TypeProducer
   private return_types: TypeAnnotation[][] = [];
   private block_results: BlockResults[] = [];
 
+  private curr_env_length: number[] = [];
+
+  private closure_map: Map<number, string[]> = new Map();
+  private copied_names: string[] = [];
+
   constructor(private debug_mode: boolean) {
     super();
     this.print_fn = print(debug_mode);
+  }
+
+  getClosureMap(): Map<number, string[]> {
+    return this.closure_map;
   }
 
   defaultResult(): Result<TypeAnnotation> {
@@ -671,6 +681,24 @@ class TypeProducer
       };
     }
 
+    // Check if name crosses closure barrier, if any
+    if (this.curr_env_length.length > 0) {
+      const closure_barrier =
+        this.curr_env_length[this.curr_env_length.length - 1];
+
+      let found_index = -1;
+      for (let i = this.scope.length - 1; i >= 0; i--) {
+        if (this.scope[i].has(name)) {
+          found_index = i;
+          break;
+        }
+      }
+
+      if (found_index <= closure_barrier && is_copyable(maybe_type.type)) {
+        this.copied_names.push(name);
+      }
+    }
+
     return {
       ok: true,
       value: maybe_type,
@@ -1047,6 +1075,10 @@ class TypeProducer
       const current_idx = this.block_results.length;
       const result = this.visitClosure(closure_ctx);
       this.block_results = this.block_results.slice(0, current_idx);
+      const closure_id = this.closure_map.size;
+      const unique_names = Array.from(new Set(this.copied_names));
+      this.closure_map.set(closure_id, unique_names);
+      this.copied_names = [];
       return result;
     }
 
@@ -1335,6 +1367,9 @@ class TypeProducer
       };
     }
 
+    // visitName is called -> might be considered as a move but not really since it's hidden behind a reference
+    const copied_names = [...this.copied_names];
+
     let type =
       maybe_name !== undefined
         ? this.visitName(maybe_name)
@@ -1354,6 +1389,8 @@ class TypeProducer
     if (!type.ok) {
       return type;
     }
+
+    this.copied_names = copied_names;
 
     return {
       ok: true,
@@ -1377,6 +1414,7 @@ class TypeProducer
       };
     }
 
+    const copied_names = [...this.copied_names];
     let type =
       maybe_name !== undefined
         ? this.visitName(maybe_name)
@@ -1398,6 +1436,7 @@ class TypeProducer
     if (!type.ok) {
       return type;
     }
+    this.copied_names = copied_names;
 
     if (!type.value.is_mutable) {
       return {
@@ -1525,6 +1564,8 @@ class TypeProducer
       value_to_type_tag("function"),
       parameter_type + " -> " + return_type,
     );
+
+    this.curr_env_length.push(this.scope.length);
     this.scope.push(new Map());
     this.moved_scope.push([]);
 
@@ -1551,6 +1592,7 @@ class TypeProducer
     }
     this.scope.pop();
     this.moved_scope.pop();
+    this.curr_env_length.pop();
 
     // Inspect block results
     const final_block = this.block_results[this.block_results.length - 1];

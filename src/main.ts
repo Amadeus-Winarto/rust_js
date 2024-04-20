@@ -6,7 +6,7 @@ import { Validator } from "./validators/types";
 import { SyntaxValidator } from "./validators/syntax";
 import { EntrypointValidator } from "./validators/entrypoint";
 import { DeclarationValidator } from "./validators/declaration";
-import { TypeSystemValidator } from "./validators/type_system";
+import { TypeProducer, TypeSystemValidator } from "./validators/type_system";
 
 import { Rust2Compiler } from "./compilers/rust2_compiler";
 import { OpCodes } from "./common/opcodes";
@@ -93,8 +93,13 @@ function compileCode() {
   logToCompilerOutput("Validation passed!");
   logToCompilerOutput("");
 
+  // The compiler requires some information from the validators
+  const type_producer = new TypeProducer(DEBUG_MODE);
+  type_producer.visit(tree);
+  const closure_map = type_producer.getClosureMap();
+
   // Compile the program
-  const compiler = new Rust2Compiler(DEBUG_MODE);
+  const compiler = new Rust2Compiler(closure_map, DEBUG_MODE);
   logToCompilerOutput("Compiling...");
   const result = compiler.visit(tree);
   if (!result.ok) {
@@ -141,7 +146,7 @@ export function runCode() {
   }
 
   if (compiled_code === undefined) {
-    logToCompilerOutput("Compilation failed. ");
+    vm_output.value = "Compilation failed. \n";
     return;
   } else {
     console.log("Code compiled successfully!");
