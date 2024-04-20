@@ -11,6 +11,7 @@ import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
+import { Break_keywordContext } from "./Rust2Parser";
 import { Loop_expressionContext } from "./Rust2Parser";
 import { Infinite_loopContext } from "./Rust2Parser";
 import { While_loopContext } from "./Rust2Parser";
@@ -155,6 +156,17 @@ export interface Rust2Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitExpression?: (ctx: ExpressionContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.break_keyword`.
+   * @param ctx the parse tree
+   */
+  enterBreak_keyword?: (ctx: Break_keywordContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.break_keyword`.
+   * @param ctx the parse tree
+   */
+  exitBreak_keyword?: (ctx: Break_keywordContext) => void;
 
   /**
    * Enter a parse tree produced by `Rust2Parser.loop_expression`.

@@ -30,8 +30,11 @@ expression:
 	| function_application
 	| immediate_closure_application
 	| parens_expression
+	| break_keyword
 	| if_expression
 	| loop_expression;
+
+break_keyword: 'break';
 
 loop_expression: infinite_loop | while_loop;
 infinite_loop: 'loop' block;

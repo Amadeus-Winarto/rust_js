@@ -4,7 +4,11 @@ import { print, Result } from "../utils";
 import { ErrorNode } from "antlr4ts/tree/ErrorNode";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import {
+  Break_keywordContext,
+  ClosureContext,
   Function_applicationContext,
+  Function_bodyContext,
+  Loop_expressionContext,
   ProgramContext,
 } from "../grammars/Rust2Parser";
 import { SyntaxError } from "./utils/errors";
@@ -16,6 +20,7 @@ class SyntaxRuleValidator
   rule_name: string = "Syntax";
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
   private scoped_threads: number = 0;
+  private loop_depth: number = 0;
 
   constructor(debug_mode: boolean) {
     super();
@@ -77,6 +82,43 @@ class SyntaxRuleValidator
       };
     }
     return this.visitChildren(ctx);
+  }
+
+  visitLoop_expression(ctx: Loop_expressionContext): Result<boolean> {
+    this.print_fn("Visiting loop");
+    this.loop_depth++;
+    const results = this.visitChildren(ctx);
+    this.loop_depth--;
+    return results;
+  }
+
+  visitBreak_keyword(ctx: Break_keywordContext): Result<boolean> {
+    this.print_fn("Visiting break_keyword");
+    if (this.loop_depth === 0) {
+      return {
+        ok: false,
+        error: new SyntaxError(ctx.start.line, "break` outside of a loop"),
+      };
+    }
+    return this.visitChildren(ctx);
+  }
+
+  visitClosure(ctx: ClosureContext): Result<boolean> {
+    this.print_fn("Visiting closure");
+    const current_loop_depth = this.loop_depth;
+    this.loop_depth = 0;
+    const results = this.visitChildren(ctx);
+    this.loop_depth = current_loop_depth;
+    return results;
+  }
+
+  visitFunction_body(ctx: Function_bodyContext): Result<boolean> {
+    this.print_fn("Visiting function_body");
+    const current_loop_depth = this.loop_depth;
+    this.loop_depth = 0;
+    const results = this.visitChildren(ctx);
+    this.loop_depth = current_loop_depth;
+    return results;
   }
 }
 

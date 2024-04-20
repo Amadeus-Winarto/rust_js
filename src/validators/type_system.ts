@@ -1,6 +1,7 @@
 import {
   AssignmentContext,
   BlockContext,
+  Break_keywordContext,
   ClosureContext,
   Cond_exprContext,
   Constant_declarationContext,
@@ -1119,6 +1120,12 @@ export class TypeProducer
       return this.visitImmediate_closure_application(immediate_closure_app_ctx);
     }
 
+    // Case 16: break
+    const break_ctx = ctx.break_keyword();
+    if (break_ctx !== undefined) {
+      return this.visitBreak_keyword(break_ctx);
+    }
+
     this.print_fn("\tUnknown expression type!");
     return {
       ok: false,
@@ -1180,9 +1187,6 @@ export class TypeProducer
     if (!closure.ok) {
       return closure;
     }
-
-    console.log("Closure type: ", closure.value.value);
-    console.log("Closure type tag: ", type_tag_to_value(closure.value.type));
 
     const function_type_string = closure.value.value;
     if (function_type_string === undefined) {
@@ -2096,6 +2100,11 @@ export class TypeProducer
       return then_block_type;
     }
 
+    const has_else_block = ctx.block().length > 1;
+    if (!has_else_block) {
+      return then_block_type;
+    }
+
     // Check else block if it exists
     const maybe_else_block =
       ctx.block(1) === undefined ? ctx.if_expression() : ctx.block(1);
@@ -2122,6 +2131,13 @@ export class TypeProducer
     }
 
     return then_block_type;
+  }
+
+  visitBreak_keyword(ctx: Break_keywordContext): Result<TypeAnnotation> {
+    return {
+      ok: true,
+      value: new TypeAnnotation(PrimitiveTypeTag.empty),
+    };
   }
 }
 
