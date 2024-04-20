@@ -55,17 +55,23 @@ function compileCode() {
 
   // Attach the error handler
   parser.removeErrorListeners();
+  let parser_error = false;
   parser.addErrorListener({
     syntaxError: function (recognizer, offendingSymbol, line, column, msg, e) {
       logToCompilerOutput(
         `Syntax error at line ${line} column ${column} -> ${msg}`,
       );
+      parser_error = true;
       return;
     },
   });
 
   // Parse the input (this is the entry point for the grammar)
   const tree = parser.program();
+  if (parser_error) {
+    logToCompilerOutput("Parsing failed! ");
+    return;
+  }
 
   // Build the list of validators
   const validators: Validator[] = [
