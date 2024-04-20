@@ -78,8 +78,7 @@ function compileCode() {
   logToCompilerOutput("Validating...");
   for (const validator of validators) {
     const result = validator.visit(tree);
-    logToCompilerOutput("\t");
-    logToCompilerOutput(validator.rule_name + ":" + result);
+    logToCompilerOutput("\t" + validator.rule_name + ":" + result);
     if (!result) {
       logToCompilerOutput("Validation failed! ");
       return;
