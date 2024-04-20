@@ -89,20 +89,20 @@ class DeclarationRuleValidator
     const name = ctx.const_name().text;
     const type = null_type;
 
-    if (in_scope_untyped(this.scope, name)) {
-      this.print_fn(
-        "Error: constant name '",
-        name,
-        "' already declared in this scope",
-      );
-      return {
-        ok: false,
-        error: new SemanticError(
-          ctx.start.line,
-          "Constant name '" + name + "' already declared in this scope",
-        ),
-      };
-    }
+    // if (in_scope_untyped(this.scope, name)) {
+    //   this.print_fn(
+    //     "Error: constant name '",
+    //     name,
+    //     "' already declared in this scope",
+    //   );
+    //   return {
+    //     ok: false,
+    //     error: new SemanticError(
+    //       ctx.start.line,
+    //       "Constant name '" + name + "' already declared in this scope",
+    //     ),
+    //   };
+    // }
 
     add_to_scope(this.scope, name, type);
     printScopes(this.debug_mode, "Current scope", this.scope);
@@ -114,20 +114,20 @@ class DeclarationRuleValidator
     const name = ctx.var_name().text;
     const type = null_type;
 
-    if (in_scope_untyped(this.scope, name)) {
-      this.print_fn(
-        "Error: variable name '",
-        name,
-        "' already declared in this scope",
-      );
-      return {
-        ok: false,
-        error: new SemanticError(
-          ctx.start.line,
-          "Variable name '" + name + "' already declared in this scope",
-        ),
-      };
-    }
+    // if (in_scope_untyped(this.scope, name)) {
+    //   this.print_fn(
+    //     "Error: variable name '",
+    //     name,
+    //     "' already declared in this scope",
+    //   );
+    //   return {
+    //     ok: false,
+    //     error: new SemanticError(
+    //       ctx.start.line,
+    //       "Variable name '" + name + "' already declared in this scope",
+    //     ),
+    //   };
+    // }
     add_to_scope(this.scope, name, type);
     printScopes(this.debug_mode, "Current scope", this.scope);
 

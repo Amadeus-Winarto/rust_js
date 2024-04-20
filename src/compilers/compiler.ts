@@ -125,7 +125,7 @@ export class Environment {
   }
 
   lookup(name: string): number | undefined {
-    const index = this.names.indexOf(name);
+    const index = this.names.lastIndexOf(name);
     if (index !== -1) {
       return index;
     }
