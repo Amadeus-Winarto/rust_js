@@ -6,7 +6,6 @@ import {
 } from "../common/types";
 import { OpCodes } from "../common/opcodes";
 import { FUNC_CODE_OFFSET, LockId, Syscall } from "./vm";
-import { threadId } from "worker_threads";
 
 export type WorkerId = number;
 
@@ -530,6 +529,10 @@ function HEAP_GET_ADDRESS(address: number): number {
   return HEAP_GET_CHILD(address, 0);
 }
 
+function HEAP_SET_ADDRESS(address: number, value: number): void {
+  HEAP_SET_CHILD(address, 0, value)
+}
+
 /* *************************
  * Virtual Machine
  * *************************/
@@ -891,11 +894,16 @@ M[OpCodes.STLG] = () => {
   B = [HEAP_GET_NUM_CHILD(ENV) - 1, P[PC][LD_ST_VALUE_IDX_OFFSET]];
   F = HEAP_GET_ENV_VALUE(ENV, B);
   while (IS_ADDRESS(F)) {
+    B = F // store address of address
     A = [HEAP_GET_ADDRESS_FRAME_IDX(F), HEAP_GET_ADDRESS_VALUE_IDX(F)];
     F = HEAP_GET_ADDRESS(F);
   }
+  G = OS.pop()
+  if (IS_ADDRESS(B)) {
+    HEAP_SET_ADDRESS(B, G)
+  }
   A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
-  A = HEAP_SET_ENV_VALUE(ENV, A, OS.pop());
+  A = HEAP_SET_ENV_VALUE(ENV, A, G);
   PC = PC + 1;
 };
 
@@ -940,11 +948,16 @@ M[OpCodes.STPG] = () => {
   ];
   F = HEAP_GET_ENV_VALUE(ENV, B);
   while (IS_ADDRESS(F)) {
+    B = F
     A = [HEAP_GET_ADDRESS_FRAME_IDX(F), HEAP_GET_ADDRESS_VALUE_IDX(F)];
     F = HEAP_GET_ADDRESS(F);
   }
+  G = OS.pop()
+  if (IS_ADDRESS(B)) {
+    HEAP_SET_ADDRESS(B, G)
+  }
   A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
-  A = HEAP_SET_ENV_VALUE(ENV, A, OS.pop());
+  A = HEAP_SET_ENV_VALUE(ENV, A, G);
   PC = PC + 1;
 };
 
