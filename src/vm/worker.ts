@@ -498,19 +498,21 @@ function HEAP_GET_THREAD_ID(address: number): ThreadId {
 // 0: [1 byte tag, 2 bytes value index of address, 2 bytes frame
 // index of adddress, 2 bytes #children, 1 byte unused]
 // 1: address
+// 2: environment that address is in
 
 const ADDRESS_TAG = 15;
-const ADDRESS_SIZE = 2;
+const ADDRESS_SIZE = 3;
 
-// changes A, B, C, expects A = [value index, frame index, address]
+// changes A, B, C, expects A = [value index, frame index, address, env]
 function NEW_ADDRESS() {
   C = A;
   A = ADDRESS_TAG;
   B = ADDRESS_SIZE;
   NEW();
-  HEAP_SET_CHILD(RES, 0, C[2]);
   HEAP_SET_2_BYTES_AT_OFFSET(RES, 1, C[0]);
   HEAP_SET_2_BYTES_AT_OFFSET(RES, 3, C[1]);
+  HEAP_SET_CHILD(RES, 0, C[2]);
+  HEAP_SET_CHILD(RES, 1, C[3])
 }
 
 function IS_ADDRESS(address: number): boolean {
@@ -531,6 +533,10 @@ function HEAP_GET_ADDRESS(address: number): number {
 
 function HEAP_SET_ADDRESS(address: number, value: number): void {
   HEAP_SET_CHILD(address, 0, value);
+}
+
+function HEAP_GET_ADDRESS_ENV(address: number): number {
+  return HEAP_GET_CHILD(address, 1)
 }
 
 function HEAP_ADDRESS_DEREF(address: number): number {
@@ -899,19 +905,22 @@ M[OpCodes.LDLG] = () => {
 // Expects address of value to store to be top tof OS
 M[OpCodes.STLG] = () => {
   A = [0, P[PC][LD_ST_VALUE_IDX_OFFSET]];
-  B = [HEAP_GET_NUM_CHILD(ENV) - 1, P[PC][LD_ST_VALUE_IDX_OFFSET]];
-  F = HEAP_GET_ENV_VALUE(ENV, B);
+  F = [HEAP_GET_NUM_CHILD(ENV) - 1, P[PC][LD_ST_VALUE_IDX_OFFSET]];
+  F = HEAP_GET_ENV_VALUE(ENV, F);
   while (IS_ADDRESS(F)) {
-    B = F; // store address of address
+    B = F // store address of address
     A = [HEAP_GET_ADDRESS_FRAME_IDX(F), HEAP_GET_ADDRESS_VALUE_IDX(F)];
     F = HEAP_GET_ADDRESS(F);
   }
-  G = OS.pop();
+  G = OS.pop()
   if (IS_ADDRESS(B)) {
-    HEAP_SET_ADDRESS(B, G);
+    HEAP_SET_ADDRESS(B, G)
+    A[0] = HEAP_GET_NUM_CHILD(HEAP_GET_ADDRESS_ENV(B)) - 1 - A[0];
+    HEAP_SET_ENV_VALUE(HEAP_GET_ADDRESS_ENV(B), A, G);
+  } else {
+    A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
+    HEAP_SET_ENV_VALUE(ENV, A, G);
   }
-  A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
-  A = HEAP_SET_ENV_VALUE(ENV, A, G);
   PC = PC + 1;
 };
 
@@ -950,22 +959,25 @@ M[OpCodes.STPG] = () => {
 
 M[OpCodes.STPG] = () => {
   A = [P[PC][LD_ST_FRAME_IDX_OFFSET], P[PC][LD_ST_VALUE_IDX_OFFSET]];
-  B = [
+  F = [
     HEAP_GET_NUM_CHILD(ENV) - 1 - (P[PC][LD_ST_FRAME_IDX_OFFSET] as number),
     P[PC][LD_ST_VALUE_IDX_OFFSET],
   ];
-  F = HEAP_GET_ENV_VALUE(ENV, B);
+  F = HEAP_GET_ENV_VALUE(ENV, F);
   while (IS_ADDRESS(F)) {
-    B = F;
+    B = F
     A = [HEAP_GET_ADDRESS_FRAME_IDX(F), HEAP_GET_ADDRESS_VALUE_IDX(F)];
     F = HEAP_GET_ADDRESS(F);
   }
-  G = OS.pop();
+  G = OS.pop()
   if (IS_ADDRESS(B)) {
-    HEAP_SET_ADDRESS(B, G);
+    HEAP_SET_ADDRESS(B, G)
+    A[0] = HEAP_GET_NUM_CHILD(HEAP_GET_ADDRESS_ENV(B)) - 1 - A[0];
+    A = HEAP_SET_ENV_VALUE(HEAP_GET_ADDRESS_ENV(B), A, G);
+  } else {
+    A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
+    A = HEAP_SET_ENV_VALUE(ENV, A, G);
   }
-  A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
-  A = HEAP_SET_ENV_VALUE(ENV, A, G);
   PC = PC + 1;
 };
 
@@ -1074,8 +1086,8 @@ M[OpCodes.LDPA] = () => {
   A = HEAP_GET_NUM_CHILD(ENV) - 1 - (P[PC][LD_ST_FRAME_IDX_OFFSET] as number);
   A = [A, P[PC][LD_ST_VALUE_IDX_OFFSET]];
   A = HEAP_GET_ENV_VALUE(ENV, A);
-  A = [P[PC][LD_ST_VALUE_IDX_OFFSET], P[PC][LD_ST_FRAME_IDX_OFFSET], A];
-  // expects A = [value index, frame index, address]
+  A = [P[PC][LD_ST_VALUE_IDX_OFFSET], P[PC][LD_ST_FRAME_IDX_OFFSET], A, ENV];
+  // expects A = [value index, frame index, address, env]
   NEW_ADDRESS();
   OS.push(RES);
   PC = PC + 1;
