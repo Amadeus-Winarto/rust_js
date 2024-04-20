@@ -1118,8 +1118,7 @@ M[OpCodes.NEWT] = () => {
 };
 
 M[OpCodes.ENDT] = () => {
-  EOT = true;
-  // PC = P.length;
+  STATUS = ThreadStatus.TERMINATED
 };
 
 // Expects thread id to be on top of OS
@@ -1127,14 +1126,12 @@ M[OpCodes.JOIN] = () => {
   H = OS.pop();
   K = IS_THREAD(H);
   if (K) {
-    G = JOIN_THREAD(HEAP_GET_THREAD_ID(H));
-    PC = PC + 1;
+    OS.pop(); // pop out closure loaded before calling NEWT
     // Even if join thread has not exited, we should still increment PC since
     // join caller should execute next instruction after it is unblocked
-    if (G === JOIN_THREAD_NOT_EXITED) {
-      STATUS = ThreadStatus.BLOCKED;
-    }
-    OS.pop(); // pop out closure loaded before calling NEWT
+    PC = PC + 1;
+    JOIN_THREAD(HEAP_GET_THREAD_ID(H));
+    BLOCKING_SYSCALL = true
   } else {
     throw Error("Join expects a Thread Id to be on top of OS");
   }
@@ -1154,11 +1151,9 @@ M[OpCodes.LOCK] = () => {
   H = OS.pop();
   K = IS_LOCK(H);
   if (K) {
-    G = LOCK(HEAP_GET_LOCK_ID(H));
     PC = PC + 1;
-    if (G === LOCK_NOT_ACQUIRED) {
-      STATUS = ThreadStatus.BLOCKED;
-    }
+    LOCK(HEAP_GET_LOCK_ID(H));
+    BLOCKING_SYSCALL = true
   } else {
     throw Error("Unlock expects a Lock Id to be on top of OS");
   }
@@ -1202,12 +1197,10 @@ function THREAD_INIT(): ThreadId {
 export const JOIN_THREAD_EXITED = 1;
 export const JOIN_THREAD_NOT_EXITED = -1;
 
-// Sets current thread status to block if joining thread has not been terminated
-function JOIN_THREAD(joinId: ThreadId): number {
-  const buf = new Int32Array(new SharedArrayBuffer(4));
-  SYSCALL_PORT.postMessage([Syscall.JOIN, THREADID, joinId, buf]);
-  Atomics.wait(buf, 0, 0);
-  return buf[0];
+// Blocking syscall
+function JOIN_THREAD(joinId: ThreadId): void {
+  const thread = saveContext()
+  SYSCALL_PORT.postMessage([Syscall.JOIN, thread, joinId, TO]);
 }
 
 export const LOCK_ACQUIRED = 1;
@@ -1220,11 +1213,10 @@ function LOCK_INIT(): LockId {
   return buf[0];
 }
 
-function LOCK(lockId: LockId): number {
-  const buf = new Int32Array(new SharedArrayBuffer(4));
-  SYSCALL_PORT.postMessage([Syscall.LOCK, THREADID, lockId, buf]);
-  Atomics.wait(buf, 0, 0);
-  return buf[0];
+// Blocking syscall
+function LOCK(lockId: LockId): void {
+  const thread = saveContext()
+  SYSCALL_PORT.postMessage([Syscall.LOCK, thread, lockId, TO]);
 }
 
 function UNLOCK(lockId: LockId) {
@@ -1306,6 +1298,7 @@ let OS: any[] = [];
 let RTS: any[] = [];
 
 let STATUS: ThreadStatus = ThreadStatus.RUNNING;
+let BLOCKING_SYSCALL: boolean = false;
 let THREADID: ThreadId;
 
 const HEAP_DATAVIEW_IDX = 0;
@@ -1373,18 +1366,15 @@ function INITIALIZE(
   // Set up message handler for accepting threads to run
   THREAD_PORT.onmessage = (message) => {
     const data = message.data;
-    const thread = runThread(data[THREAD_IDX], data[TIME_QUANTA_IDX]);
-
-    // send thread back to vm after finished running
-    THREAD_PORT.postMessage([thread]);
+    runThread(data[THREAD_IDX], data[TIME_QUANTA_IDX]);
   };
 }
 
-// End of thread
-let EOT: boolean = true;
 let TO: number;
 
-function runThread(thread: Thread, timeQuanta: number): Thread {
+function runThread(thread: Thread, timeQuanta: number): void {
+  BLOCKING_SYSCALL = false
+
   loadContext(thread);
 
   // if thread first time running
@@ -1400,29 +1390,21 @@ function runThread(thread: Thread, timeQuanta: number): Thread {
     ENV = HEAP_ENV_EXTEND(RES, ENV);
   }
 
-  EOT = false;
   TO = timeQuanta;
   // run timeQuanta number of instructions or till no more instructions
   // or till thread gets blocked
-  // while (TO > 0 && RUNNING && STATUS !== ThreadStatus.BLOCKED) {
-  while (TO > 0 && !EOT && STATUS !== ThreadStatus.BLOCKED) {
+  while (TO > 0 && (STATUS !== ThreadStatus.TERMINATED) && !BLOCKING_SYSCALL) {
     RUN_INSTRUCTION();
     TO = TO - 1;
   }
 
-  saveContext(thread);
-  // If thread status is BLOCKED, dont change it
-  if (STATUS === ThreadStatus.RUNNING) {
-    // if (thread.PC === thread.P.length) {
-    if (EOT) {
-      // No more code, thread should exit
-      thread.status = ThreadStatus.TERMINATED;
-    } else {
-      // Time quanta is up
-      thread.status = ThreadStatus.READY;
+  if (!BLOCKING_SYSCALL) {
+    const thread = saveContext()
+    if (thread.status === ThreadStatus.RUNNING) {
+      thread.status = ThreadStatus.READY
     }
+    THREAD_PORT.postMessage([thread])
   }
-  return thread;
 }
 
 const INS_OPCODE_OFFSET = 0;
@@ -1430,7 +1412,7 @@ const INS_OPCODE_OFFSET = 0;
 function RUN_INSTRUCTION() {
   // Attempting to return from entry point function, end of program
   if (FN === ENTRY && P[PC][INS_OPCODE_OFFSET] === OpCodes.RETG) {
-    EOT = true;
+    STATUS = ThreadStatus.TERMINATED
   } else {
     // The microcode should increment PC
     M[P[PC][INS_OPCODE_OFFSET]]();
@@ -1460,27 +1442,34 @@ function loadContext(thread: Thread): void {
   OS = thread.OS;
   RTS = thread.RTS;
 
+  if (thread.status !== ThreadStatus.READY) {
+    throw Error('worker received a thread that is not ready')
+  }
   STATUS = ThreadStatus.RUNNING;
   THREADID = thread.ID;
 }
 
-function saveContext(thread: Thread): void {
-  // Context saving: save register values of worker to thread
-  thread.RS.A = A;
-  thread.RS.B = B;
-  thread.RS.C = C;
-  thread.RS.D = D;
-  thread.RS.E = E;
-  thread.RS.F = F;
-  thread.RS.G = G;
-  thread.RS.H = H;
-  thread.RS.I = I;
-  thread.RS.J = J;
-  thread.RS.K = K;
-
-  thread.FN = FN;
-  thread.PC = PC;
-  thread.ENV = ENV;
-  thread.OS = OS;
-  thread.RTS = RTS;
+function saveContext(): Thread {
+  return {
+    ID: THREADID,
+    FN: FN,
+    PC: PC,
+    ENV: ENV,
+    OS: OS,
+    RTS: RTS,
+    RS: {
+      A: A,
+      B: B,
+      C: C,
+      D: D,
+      E: E,
+      F: F,
+      G: G,
+      H: H,
+      I: I,
+      J: J,
+      K: K,
+    },
+    status: STATUS
+  }
 }
