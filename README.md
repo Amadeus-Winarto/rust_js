@@ -46,7 +46,12 @@ Once you have installed all the dependencies, you can run the code using the fol
 npm run main
 ```
 
-This should host the server on `localhost:8080`. Go to the browser and type `localhost:8080` to see the output.
+This should host the server on `localhost:8080`. Go to the browser and type `localhost:8080` to see the output. You should be able to see the following:
+
+<figure>
+  <img src="UI.png" alt="Editor on the browser" style="width:100%">
+  <figcaption>Editor on the browser</figcaption>
+</figure>
 
 ## Samples
 
