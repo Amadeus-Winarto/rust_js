@@ -15,6 +15,20 @@ import { Instruction, Program } from "./compilers/compiler";
 import { BorrowCheckerValidator } from "./validators/borrow_checker";
 
 import { runWithProgram } from "./vm/vm";
+import * as monaco from "monaco-editor";
+
+const editor = monaco.editor.create(document.getElementById("editor")!, {
+  value: "",
+  language: "rust",
+  lineNumbers: "on",
+  roundedSelection: false,
+  scrollBeyondLastLine: false,
+  readOnly: false,
+  theme: "vs-light",
+  fontFamily: "Courier New",
+  fontSize: 16,
+});
+
 const DEBUG_MODE = false;
 const instruction_to_string = (instruction: Instruction) => {
   return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
@@ -43,8 +57,7 @@ function clearVMOutput() {
 let compiled_code: Program | undefined = undefined;
 
 function compileCode() {
-  const program_string = (document.getElementById("editor") as HTMLInputElement)
-    .value;
+  const program_string = editor.getValue();
   clearCompilerOutput();
 
   // Create the lexer and parser
@@ -163,28 +176,3 @@ export function runCode() {
 }
 
 document.getElementById("runBtn")?.addEventListener("click", runCode);
-
-//main();
-
-// Enable tabs in textarea
-document.getElementById("editor")?.addEventListener("keydown", function (e) {
-  if (e.key == "Tab") {
-    e.preventDefault();
-    var start = (this as HTMLInputElement).selectionStart;
-    var end = (this as HTMLInputElement).selectionEnd;
-    if (start === null || end === null) {
-      return;
-    }
-
-    // set textarea value to: text before caret + tab + text after caret
-    (this as HTMLInputElement).value =
-      (this as HTMLInputElement).value.substring(0, start) +
-      "\t" +
-      (this as HTMLInputElement).value.substring(end); // Tab as 4 spaces
-
-    // put caret at right position again
-    (this as HTMLInputElement).selectionStart = (
-      this as HTMLInputElement
-    ).selectionEnd = start + 1;
-  }
-});
