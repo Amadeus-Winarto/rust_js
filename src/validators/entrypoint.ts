@@ -38,14 +38,15 @@ export class EntrypointValidator
     if (function_declarations.length === 0) {
       this.print_fn("No main function found");
       this.compiler_output.value =
-        "SyntaxError: Rust programs require a main function!";
+        "SyntaxError: Rust programs require a main function!" + "\n";
       return false;
     }
 
     if (function_declarations.length > 1) {
       this.compiler_output.value =
         "SyntaxError: Rust programs can only have one main function. Found " +
-        function_declarations.length;
+        function_declarations.length +
+        "\n";
       return false;
     }
 
@@ -55,7 +56,7 @@ export class EntrypointValidator
       undefined;
     if (!has_no_parameter) {
       this.compiler_output.value =
-        "SyntaxError: main function should not have parameters";
+        "SyntaxError: main function should not have parameters" + "\n";
       return false;
     }
 
@@ -64,7 +65,8 @@ export class EntrypointValidator
       this.compiler_output.value =
         "SyntaxError: main function should have return type (). Got " +
         main_function_ctx!.type().text +
-        " instead";
+        " instead" +
+        "\n";
       return false;
     }
 

@@ -113,7 +113,7 @@ export class SyntaxValidator
       this.print_fn("Syntax is legal");
       return true;
     } else {
-      this.compiler_output.value = has_legal_syntax.error.message;
+      this.compiler_output.value = has_legal_syntax.error.message + "\n";
       return false;
     }
   }

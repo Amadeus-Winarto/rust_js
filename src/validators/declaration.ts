@@ -303,7 +303,7 @@ export class DeclarationValidator
       this.print_fn("Declarations are legal");
       return true;
     } else {
-      this.compiler_output.value = has_legal_syntax.error.message;
+      this.compiler_output.value = has_legal_syntax.error.message + "\n";
       return false;
     }
   }

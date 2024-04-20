@@ -1889,7 +1889,7 @@ export class TypeSystemValidator
     const program_type = this.type_producer.visit(ctx);
 
     if (!program_type.ok) {
-      this.compiler_output.value = program_type.error.message;
+      this.compiler_output.value = program_type.error.message + "\n";
       return false;
     }
 
