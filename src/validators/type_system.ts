@@ -2100,19 +2100,15 @@ export class TypeProducer
       return then_block_type;
     }
 
-    const has_else_block = ctx.block().length > 1;
-    if (!has_else_block) {
+    // Check else-if block if it exists
+    const else_block =
+      ctx.block().length > 1 ? ctx.block(1) : ctx.if_expression();
+    if (else_block === undefined) {
+      // No else block! Return the type of the then block
       return then_block_type;
     }
 
-    // Check else block if it exists
-    const maybe_else_block =
-      ctx.block(1) === undefined ? ctx.if_expression() : ctx.block(1);
-    if (maybe_else_block === undefined) {
-      return then_block_type;
-    }
-
-    const else_block_type = this.visit(maybe_else_block);
+    const else_block_type = this.visit(else_block);
     if (!else_block_type.ok) {
       return else_block_type;
     }

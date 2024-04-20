@@ -1107,13 +1107,29 @@ class Rust2InstructionCompiler
       },
     };
 
-    const has_else_block = ctx.block().length > 1;
+    const else_if_block = ctx.if_expression();
+    if (else_if_block !== undefined) {
+      return compile_conditional(
+        this.visit(ctx.cond_expr()),
+        this.visit(ctx.block(0)),
+        this.visit(else_if_block),
+      );
+    }
 
-    return compile_conditional(
-      this.visit(ctx.cond_expr()),
-      this.visit(ctx.block(0)),
-      has_else_block ? this.visit(ctx.block(1)) : noop,
-    );
+    const else_block = ctx.block().length > 1 && ctx.block(1);
+    if (else_block != false) {
+      return compile_conditional(
+        this.visit(ctx.cond_expr()),
+        this.visit(ctx.block(0)),
+        this.visit(else_block),
+      );
+    } else {
+      return compile_conditional(
+        this.visit(ctx.cond_expr()),
+        this.visit(ctx.block(0)),
+        noop,
+      );
+    }
   }
 
   visitCond_expr(ctx: Cond_exprContext): InstructionCompilerOutput {
