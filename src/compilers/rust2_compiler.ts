@@ -1491,6 +1491,7 @@ class Rust2InstructionCompiler
     }
 
     // Pop the environment
+    let num_protected_data = 0;
     if (num_declarations > 0) {
       const locks_in_scope = this.lock_guard_stack.pop();
       if (locks_in_scope === undefined) {
@@ -1502,10 +1503,23 @@ class Rust2InstructionCompiler
           ),
         };
       }
+      num_protected_data = locks_in_scope.length / 2;
+
       instructions.push(...reverse_in_group(locks_in_scope as Instructions, 2));
       instructions.push({ opcode: OpCodes.POPENV, operands: [] });
       this.environments.pop();
       this.lock_data_mapping_stack.pop();
+    }
+
+    // Amend the environment size
+    if (instructions.length > 0) {
+      const first_instr = instructions[0];
+      if (
+        first_instr.opcode === OpCodes.NEWENV &&
+        typeof first_instr.operands[0] === "number"
+      ) {
+        first_instr.operands[0] += num_protected_data;
+      }
     }
 
     return {
