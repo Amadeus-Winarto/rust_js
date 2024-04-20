@@ -1724,7 +1724,7 @@ export class TypeProducer
       final_block.return_type.type === PrimitiveTypeTag.empty
     ) {
       this.print_fn("Final expression but no return statement");
-      return return_type === final_block.block_type.type
+      return is_promotable(final_block.block_type.type, return_type)
         ? {
             ok: true,
             value: type,
