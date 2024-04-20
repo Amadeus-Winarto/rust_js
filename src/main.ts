@@ -123,7 +123,7 @@ function compileCode() {
   compiled_code = result.value;
   let program = result.value;
 
-  logToCompilerOutput("Entry function: ", program.entry_point);
+  logToCompilerOutput("Entry function: " + program.entry_point);
   logToCompilerOutput("Functions: ");
   for (const func of program.functions) {
     logToCompilerOutput("\tStack size: " + func.stack_size);
