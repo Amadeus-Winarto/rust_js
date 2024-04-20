@@ -792,6 +792,22 @@ class BorrowChecker
   handle_prebuilt_function(ctx: Function_applicationContext): Result<boolean> {
     const function_name = ctx.function_name().text;
 
+    if (function_name === "scoped_threads") {
+      // Treat the closure as a block
+      const closure_ctx = ctx.args_list().args()?.expression()[0].closure();
+      if (closure_ctx === undefined) {
+        return {
+          ok: false,
+          error: new BorrowCheckerError(
+            `scoped_threads requires a closure as an argument. This is a Validator bug.`,
+            ctx.start.line,
+          ),
+        };
+      }
+
+      return this.visitBlock(closure_ctx.function_body().block());
+    }
+
     if (function_name === "thread_spawn") {
       const arg_exprs = ctx.args_list().args()?.expression();
       if (arg_exprs === undefined || arg_exprs.length === 0) {
@@ -826,11 +842,14 @@ class BorrowChecker
         }
         this.capture_info = undefined;
       }
+
+      return {
+        ok: true,
+        value: true,
+      };
     }
-    return {
-      ok: true,
-      value: true,
-    };
+
+    return this.visitChildren(ctx); // Nothing special -> visit children
   }
 }
 
