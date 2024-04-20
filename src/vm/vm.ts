@@ -1,6 +1,6 @@
 import { ThreadStatus, ThreadId, Thread } from "./threads";
 import { RoundRobinScheduler, Scheduler } from "./scheduler";
-import { Program } from "./compiler";
+import { ProgramArray as Program } from "../common/types";
 import {
   WorkerId,
   JOIN_THREAD_EXITED,
@@ -276,14 +276,14 @@ function SHUT_DOWN_MACHINE() {
   for (const w of workers.values()) {
     w.terminate();
   }
-  idleWorkers.length = 0
-  threadChannels.clear()
-  syscallChannels.clear()
-  workers.clear()
-  threads.clear()
-  locks.clear()
-  joinThreads.clear()
-  maxLockId = 0
+  idleWorkers.length = 0;
+  threadChannels.clear();
+  syscallChannels.clear();
+  workers.clear();
+  threads.clear();
+  locks.clear();
+  joinThreads.clear();
+  maxLockId = 0;
 }
 
 function RUN_MACHINE() {

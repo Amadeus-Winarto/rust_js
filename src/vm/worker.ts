@@ -1,12 +1,9 @@
 import { ThreadStatus, Thread, ThreadId } from "./threads";
 import {
-  Instruction,
-  Offset,
-  Address,
-  Argument,
-  Program,
-  RVMFunction,
-} from "./compiler";
+  InstructionArr as Instruction,
+  ProgramArray as Program,
+  RVMFunctionArr as RVMFunction,
+} from "../common/types";
 import { OpCodes } from "../common/opcodes";
 import { FUNC_CODE_OFFSET, LockId, Syscall } from "./vm";
 import { threadId } from "worker_threads";

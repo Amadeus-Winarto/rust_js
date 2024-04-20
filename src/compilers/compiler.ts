@@ -15,7 +15,7 @@ export class Instruction {
 
 export type Instructions = Instruction[];
 
-export type SVMFunction = {
+export type RVMFunction = {
   stack_size: number;
   environment_size: number;
   num_args: number;
@@ -24,7 +24,7 @@ export type SVMFunction = {
 
 export type Program = {
   entry_point: number | undefined;
-  functions: SVMFunction[];
+  functions: RVMFunction[];
 };
 
 export class CompilerError extends Error {

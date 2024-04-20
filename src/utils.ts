@@ -1,3 +1,4 @@
+import { ProgramArray, RVMFunctionArr, InstructionArr } from "./common/types";
 import { Program } from "./compilers/compiler";
 import { Scope, TypeAnnotation } from "./validators/types";
 import { writeFileSync } from "fs";
@@ -6,7 +7,7 @@ export const print = (is_debug: boolean) => {
   if (is_debug) {
     return console.log;
   }
-  return () => { };
+  return () => {};
 };
 
 export function in_scope_untyped(scope: Scope[], name: string): boolean {
@@ -53,29 +54,6 @@ export type Result<T, E = Error> =
   | { ok: true; value: T }
   | { ok: false; error: E };
 
-type Offset = number; // instructions to skip
-type Address = [
-  number, // function index
-  number?, // instruction index within function; optional
-];
-type Argument = number | boolean | string | Offset | Address;
-type InstructionArr = [
-  number, // opcode
-  Argument?,
-  Argument?,
-];
-type SVMFunctionArr = [
-  number, // stack size
-  number, // environment size
-  number, // number of arguments
-  InstructionArr[], // code
-];
-
-type ProgramArray = [
-  number, // entry_point
-  SVMFunctionArr[], // functions
-];
-
 export function toProgramArray(program: Program): ProgramArray {
   if (program.entry_point === undefined) {
     console.error(
@@ -84,7 +62,7 @@ export function toProgramArray(program: Program): ProgramArray {
     program.entry_point = -1;
   }
 
-  const functions: SVMFunctionArr[] = [];
+  const functions: RVMFunctionArr[] = [];
   for (const func of program.functions) {
     const instructions: InstructionArr[] = [];
     for (const instr of func.instructions) {

@@ -7,7 +7,7 @@ import {
   Environment,
   name_recursive_lookup,
   Program,
-  SVMFunction,
+  RVMFunction,
   CompileTimeContext,
   Instruction,
 } from "./compiler";
@@ -264,7 +264,7 @@ class Rust2InstructionCompiler
   language_version: string = "Rust2";
 
   private environments: Environment[] = [];
-  private closures: SVMFunction[] = [];
+  private closures: RVMFunction[] = [];
   private num_top_level_functions: number = 0;
   private data_index: number | undefined;
   private lock_data_mapping_stack: LockDataMappping[] = [];
@@ -287,7 +287,7 @@ class Rust2InstructionCompiler
     this.num_top_level_functions = num;
   }
 
-  getClosures(): SVMFunction[] {
+  getClosures(): RVMFunction[] {
     return this.closures;
   }
 
@@ -944,7 +944,7 @@ class Rust2InstructionCompiler
     const function_instructions = maybe_compiled_function.value;
 
     // Store the function object
-    const function_obj: SVMFunction = {
+    const function_obj: RVMFunction = {
       stack_size: function_instructions.max_stack_size,
       environment_size: func_parameters.length + num_declarations,
       num_args: func_parameters.length,
@@ -1596,7 +1596,7 @@ export class Rust2Compiler
 
   private constant_env: CompileTimeContext = new CompileTimeContext();
   private function_env: Environment = new Environment();
-  private functions: SVMFunction[] = [];
+  private functions: RVMFunction[] = [];
 
   constructor(private debug_mode: boolean) {
     super();
