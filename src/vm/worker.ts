@@ -533,6 +533,14 @@ function HEAP_SET_ADDRESS(address: number, value: number): void {
   HEAP_SET_CHILD(address, 0, value)
 }
 
+function HEAP_ADDRESS_DEREF(address: number): number {
+  H = address
+  while (IS_ADDRESS(H)) {
+    H = HEAP_GET_ADDRESS(H);
+  }
+  return H
+}
+
 /* *************************
  * Virtual Machine
  * *************************/
@@ -1234,6 +1242,8 @@ function convertToJsFormat(address: number): any {
       return HEAP_GET_LOCK_ID(address);
     case THREAD_TAG:
       return HEAP_GET_THREAD_ID(address);
+    case ADDRESS_TAG:
+      return convertToJsFormat(HEAP_ADDRESS_DEREF(address))
     default:
       return address;
   }
