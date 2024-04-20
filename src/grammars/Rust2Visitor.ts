@@ -37,7 +37,6 @@ import { Integer_literalContext } from "./Rust2Parser";
 import { Float_literalContext } from "./Rust2Parser";
 import { Boolean_literalContext } from "./Rust2Parser";
 import { String_literalContext } from "./Rust2Parser";
-import { String_charactersContext } from "./Rust2Parser";
 import { TypeContext } from "./Rust2Parser";
 import { Primitive_typeContext } from "./Rust2Parser";
 import { Generic_mutex_typeContext } from "./Rust2Parser";
@@ -303,13 +302,6 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitString_literal?: (ctx: String_literalContext) => Result;
-
-  /**
-   * Visit a parse tree produced by `Rust2Parser.string_characters`.
-   * @param ctx the parse tree
-   * @return the visitor result
-   */
-  visitString_characters?: (ctx: String_charactersContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.type`.

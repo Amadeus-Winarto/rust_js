@@ -37,7 +37,6 @@ import { Integer_literalContext } from "./Rust2Parser";
 import { Float_literalContext } from "./Rust2Parser";
 import { Boolean_literalContext } from "./Rust2Parser";
 import { String_literalContext } from "./Rust2Parser";
-import { String_charactersContext } from "./Rust2Parser";
 import { TypeContext } from "./Rust2Parser";
 import { Primitive_typeContext } from "./Rust2Parser";
 import { Generic_mutex_typeContext } from "./Rust2Parser";
@@ -438,17 +437,6 @@ export interface Rust2Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitString_literal?: (ctx: String_literalContext) => void;
-
-  /**
-   * Enter a parse tree produced by `Rust2Parser.string_characters`.
-   * @param ctx the parse tree
-   */
-  enterString_characters?: (ctx: String_charactersContext) => void;
-  /**
-   * Exit a parse tree produced by `Rust2Parser.string_characters`.
-   * @param ctx the parse tree
-   */
-  exitString_characters?: (ctx: String_charactersContext) => void;
 
   /**
    * Enter a parse tree produced by `Rust2Parser.type`.

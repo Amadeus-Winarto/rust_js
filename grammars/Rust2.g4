@@ -82,9 +82,10 @@ literal:
 integer_literal: NUMBER;
 float_literal: NUMBER '.' NUMBER;
 boolean_literal: 'true' | 'false';
-string_literal: '"' (string_characters)* '"';
+string_literal: STRING;
 
-string_characters: ~( '"' | '\\');
+STRING: '"' (ESC | .)*? '"';
+fragment ESC: '\\"' | '\\\\';
 
 type: primitive_type | borrowed_type | borrowed_mutable_type;
 primitive_type:

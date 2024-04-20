@@ -377,7 +377,7 @@ class Rust2InstructionCompiler
 
   visitString_literal(ctx: String_literalContext): InstructionCompilerOutput {
     this.print_fn("Visiting string_literal");
-    const value = ctx.text;
+    const value = ctx.text.slice(1, -1); // Remove the quotes
     return {
       ok: true,
       value: {
