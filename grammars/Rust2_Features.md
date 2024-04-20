@@ -2,6 +2,37 @@
 
 Note: all the features implemented in Rust1 are also implemented in Rust2. The following describes the additional features implemented in Rust2.
 
+## Comments
+
+Rust2 now supports comments. Comments are denoted by `//` for single-line comments and `/* */` for multi-line comments. For example:
+
+```rust
+// This is a single-line comment
+/* This is a
+multi-line comment */
+```
+
+## Loops
+
+Rust2 supports the following loop constructs:
+
+- infinite loop (`loop`)
+- while loop (`while`)
+
+For example:
+
+```rust
+let mut x = 0;
+loop {
+    x += 1;
+    if x == 5 {
+        break;
+    }
+}
+```
+
+This code increments `x` until it reaches 5.
+
 ## Deduced Types for Variables
 
 The following is now valid in Rust2:
