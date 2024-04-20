@@ -530,15 +530,15 @@ function HEAP_GET_ADDRESS(address: number): number {
 }
 
 function HEAP_SET_ADDRESS(address: number, value: number): void {
-  HEAP_SET_CHILD(address, 0, value)
+  HEAP_SET_CHILD(address, 0, value);
 }
 
 function HEAP_ADDRESS_DEREF(address: number): number {
-  H = address
+  H = address;
   while (IS_ADDRESS(H)) {
     H = HEAP_GET_ADDRESS(H);
   }
-  return H
+  return H;
 }
 
 /* *************************
@@ -902,13 +902,13 @@ M[OpCodes.STLG] = () => {
   B = [HEAP_GET_NUM_CHILD(ENV) - 1, P[PC][LD_ST_VALUE_IDX_OFFSET]];
   F = HEAP_GET_ENV_VALUE(ENV, B);
   while (IS_ADDRESS(F)) {
-    B = F // store address of address
+    B = F; // store address of address
     A = [HEAP_GET_ADDRESS_FRAME_IDX(F), HEAP_GET_ADDRESS_VALUE_IDX(F)];
     F = HEAP_GET_ADDRESS(F);
   }
-  G = OS.pop()
+  G = OS.pop();
   if (IS_ADDRESS(B)) {
-    HEAP_SET_ADDRESS(B, G)
+    HEAP_SET_ADDRESS(B, G);
   }
   A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
   A = HEAP_SET_ENV_VALUE(ENV, A, G);
@@ -956,13 +956,13 @@ M[OpCodes.STPG] = () => {
   ];
   F = HEAP_GET_ENV_VALUE(ENV, B);
   while (IS_ADDRESS(F)) {
-    B = F
+    B = F;
     A = [HEAP_GET_ADDRESS_FRAME_IDX(F), HEAP_GET_ADDRESS_VALUE_IDX(F)];
     F = HEAP_GET_ADDRESS(F);
   }
-  G = OS.pop()
+  G = OS.pop();
   if (IS_ADDRESS(B)) {
-    HEAP_SET_ADDRESS(B, G)
+    HEAP_SET_ADDRESS(B, G);
   }
   A[0] = HEAP_GET_NUM_CHILD(ENV) - 1 - A[0];
   A = HEAP_SET_ENV_VALUE(ENV, A, G);
@@ -1243,7 +1243,7 @@ function convertToJsFormat(address: number): any {
     case THREAD_TAG:
       return HEAP_GET_THREAD_ID(address);
     case ADDRESS_TAG:
-      return convertToJsFormat(HEAP_ADDRESS_DEREF(address))
+      return convertToJsFormat(HEAP_ADDRESS_DEREF(address));
     default:
       return address;
   }
