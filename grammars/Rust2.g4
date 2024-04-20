@@ -28,8 +28,17 @@ expression:
 	| expression binary_logical_operator expression
 	| unary_operator expression
 	| function_application
+	| immediate_closure_application
 	| parens_expression
-	| if_expression;
+	| break_keyword
+	| if_expression
+	| loop_expression;
+
+break_keyword: 'break';
+
+loop_expression: infinite_loop | while_loop;
+infinite_loop: 'loop' block;
+while_loop: 'while' cond_expr block;
 
 refed_name: immutable_refed_name | mutable_refed_name;
 immutable_refed_name: '&' name | '&' refed_name;
@@ -39,6 +48,7 @@ assignment: (name | derefed_name) '=' expression;
 
 closure: closure_parameter_list '->' type function_body;
 closure_parameter_list: '||' | '|' parameters '|';
+immediate_closure_application: closure args_list;
 
 parens_expression: '(' expression ')';
 if_expression:
@@ -82,12 +92,20 @@ literal:
 integer_literal: NUMBER;
 float_literal: NUMBER '.' NUMBER;
 boolean_literal: 'true' | 'false';
-string_literal: '"' (string_characters)* '"';
+string_literal: STRING;
 
-string_characters: ~( '"' | '\\');
+STRING: '"' (ESC | .)*? '"';
+fragment ESC: '\\"' | '\\\\';
 
 type: primitive_type | borrowed_type | borrowed_mutable_type;
-primitive_type: 'i32' | 'f32' | 'bool' | 'str' | '()';
+primitive_type:
+	'i32'
+	| 'f32'
+	| 'bool'
+	| 'str'
+	| '()'
+	| generic_mutex_type;
+generic_mutex_type: 'Mutex<' type '>';
 borrowed_type: '&' primitive_type | '&' type;
 borrowed_mutable_type: '&mut' primitive_type | '&mut' type;
 
@@ -104,3 +122,6 @@ NUMBER: DIGIT+;
 IDENTIFIER: LETTER ( LETTER | DIGIT | '_')*;
 fragment LETTER: [a-zA-Z];
 fragment DIGIT: [0-9];
+
+COMMENT: '//' ~('\n' | '\r')* -> skip;
+MULTILINE_COMMENT: '/*' .*? '*/' -> skip;

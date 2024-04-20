@@ -19,8 +19,26 @@ export enum PrimitiveTypeTag {
   integer_literal = "integer",
   float_literal = "float",
 
+  // Concurrency-related types. Consider them as primitive for now
+  join_handle = "JoinHandle",
+  mutex = "Mutex",
+
   unit = "unit", // Represents correctly typed programs but the exact type is not needed
   unknown = "unknown",
+}
+
+export function is_copyable(type: TypeTag): boolean {
+  return (
+    type === PrimitiveTypeTag.i32 ||
+    type === PrimitiveTypeTag.i64 ||
+    type === PrimitiveTypeTag.f32 ||
+    type === PrimitiveTypeTag.f64 ||
+    type === PrimitiveTypeTag.bool ||
+    type === PrimitiveTypeTag.integer_literal ||
+    type === PrimitiveTypeTag.float_literal ||
+    type === PrimitiveTypeTag.unit ||
+    is_immutable_borrow(type)
+  );
 }
 
 class Reference<T extends TypeTag> {
@@ -83,7 +101,7 @@ export class TypeAnnotation {
   }
 }
 
-function value_to_primitive_type(value: string): TypeTag {
+function value_to_primitive_type_tag(value: string): TypeTag {
   if (value === "i32") {
     return PrimitiveTypeTag.i32;
   }
@@ -108,34 +126,42 @@ function value_to_primitive_type(value: string): TypeTag {
   if (value === "()") {
     return PrimitiveTypeTag.empty;
   }
-  if (value === "integer_literal") {
+  if (value === "integer") {
     return PrimitiveTypeTag.integer_literal;
   }
-  if (value === "float_literal") {
+  if (value === "float") {
     return PrimitiveTypeTag.float_literal;
   }
   if (value === "...") {
     return PrimitiveTypeTag.unit;
   }
+  if (value === "JoinHandle") {
+    return PrimitiveTypeTag.join_handle;
+  }
+  if (value === "Mutex") {
+    return PrimitiveTypeTag.mutex;
+  }
   return PrimitiveTypeTag.unknown;
 }
 
-export function value_to_type(value: string): TypeTag {
+export function value_to_type_tag(value: string): TypeTag {
   if (value.startsWith("&mut")) {
-    return new Reference(new Mutable(value_to_type(value.slice(4).trim())));
+    return new Reference(new Mutable(value_to_type_tag(value.slice(4).trim())));
   } else if (value.startsWith("&")) {
-    return new Reference(value_to_type(value.slice(1)));
+    return new Reference(value_to_type_tag(value.slice(1)));
+  } else if (value.includes("<") && value.includes(">")) {
+    return value_to_primitive_type_tag(value.split("<")[0]);
   } else {
-    return value_to_primitive_type(value);
+    return value_to_primitive_type_tag(value);
   }
 }
 
-export function type_to_value(type: TypeTag): string {
+export function type_tag_to_value(type: TypeTag): string {
   if (type instanceof Reference) {
     if (type.type instanceof Mutable) {
-      return "&mut " + type_to_value(type.type.type);
+      return "&mut " + type_tag_to_value(type.type.type);
     } else {
-      return "&" + type_to_value(type.type);
+      return "&" + type_tag_to_value(type.type);
     }
   } else {
     return type;
@@ -158,7 +184,7 @@ export function is_promotable(type: TypeTag, target: TypeTag): boolean {
     return is_float(target);
   }
 
-  return type_to_value(type) === type_to_value(target);
+  return type_tag_to_value(type) === type_tag_to_value(target);
 }
 
 export function is_float(type: TypeTag): boolean {

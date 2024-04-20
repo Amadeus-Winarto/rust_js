@@ -14,7 +14,7 @@ import {
   Scope,
   printScopes,
   TypeAnnotation,
-  value_to_type,
+  value_to_type_tag,
   PrimitiveTypeTag,
 } from "./types";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
@@ -30,6 +30,7 @@ import {
   Closure_parameter_listContext,
   ClosureContext,
 } from "../grammars/Rust2Parser";
+import { PreBuiltFunctions } from "../preamble/preamble";
 
 const null_type = new TypeAnnotation(PrimitiveTypeTag.empty);
 
@@ -68,11 +69,10 @@ class DeclarationRuleValidator
     this.print_fn("Visiting program -> Initialising scope");
     this.scope = [new Map()];
 
-    add_to_scope(
-      this.scope,
-      "println!",
-      new TypeAnnotation(PrimitiveTypeTag.function, "<...> -> ()"),
-    );
+    for (const [function_name, function_data] of PreBuiltFunctions.entries()) {
+      add_to_scope(this.scope, function_name, function_data.type);
+    }
+
     return this.visitChildren(ctx);
   }
 
@@ -89,20 +89,20 @@ class DeclarationRuleValidator
     const name = ctx.const_name().text;
     const type = null_type;
 
-    if (in_scope_untyped(this.scope, name)) {
-      this.print_fn(
-        "Error: constant name '",
-        name,
-        "' already declared in this scope",
-      );
-      return {
-        ok: false,
-        error: new SemanticError(
-          ctx.start.line,
-          "Constant name '" + name + "' already declared in this scope",
-        ),
-      };
-    }
+    // if (in_scope_untyped(this.scope, name)) {
+    //   this.print_fn(
+    //     "Error: constant name '",
+    //     name,
+    //     "' already declared in this scope",
+    //   );
+    //   return {
+    //     ok: false,
+    //     error: new SemanticError(
+    //       ctx.start.line,
+    //       "Constant name '" + name + "' already declared in this scope",
+    //     ),
+    //   };
+    // }
 
     add_to_scope(this.scope, name, type);
     printScopes(this.debug_mode, "Current scope", this.scope);
@@ -114,20 +114,20 @@ class DeclarationRuleValidator
     const name = ctx.var_name().text;
     const type = null_type;
 
-    if (in_scope_untyped(this.scope, name)) {
-      this.print_fn(
-        "Error: variable name '",
-        name,
-        "' already declared in this scope",
-      );
-      return {
-        ok: false,
-        error: new SemanticError(
-          ctx.start.line,
-          "Variable name '" + name + "' already declared in this scope",
-        ),
-      };
-    }
+    // if (in_scope_untyped(this.scope, name)) {
+    //   this.print_fn(
+    //     "Error: variable name '",
+    //     name,
+    //     "' already declared in this scope",
+    //   );
+    //   return {
+    //     ok: false,
+    //     error: new SemanticError(
+    //       ctx.start.line,
+    //       "Variable name '" + name + "' already declared in this scope",
+    //     ),
+    //   };
+    // }
     add_to_scope(this.scope, name, type);
     printScopes(this.debug_mode, "Current scope", this.scope);
 
@@ -278,7 +278,10 @@ export class DeclarationValidator
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
   private rule_validator: DeclarationRuleValidator;
 
-  constructor(debug_mode: boolean) {
+  constructor(
+    private compiler_output: HTMLInputElement,
+    debug_mode: boolean,
+  ) {
     super();
     this.print_fn = print(debug_mode);
     this.rule_validator = new DeclarationRuleValidator(debug_mode);
@@ -300,7 +303,7 @@ export class DeclarationValidator
       this.print_fn("Declarations are legal");
       return true;
     } else {
-      console.error(has_legal_syntax.error);
+      this.compiler_output.value = has_legal_syntax.error.message + "\n";
       return false;
     }
   }

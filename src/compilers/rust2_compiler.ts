@@ -7,8 +7,9 @@ import {
   Environment,
   name_recursive_lookup,
   Program,
-  SVMFunction,
+  RVMFunction,
   CompileTimeContext,
+  Instruction,
 } from "./compiler";
 import { print, Result } from "../utils";
 import {
@@ -37,10 +38,20 @@ import {
   Derefed_nameContext,
   Immutable_refed_nameContext,
   Mutable_refed_nameContext,
+  Loop_expressionContext,
+  Infinite_loopContext,
+  While_loopContext,
+  Immediate_closure_applicationContext,
+  Break_keywordContext,
 } from "../grammars/Rust2Parser";
 import { Rust2CompileTimeEvaluator } from "./rust2_compile_time_evaluator";
-import OpCodes from "./opcodes";
+import OpCodes from "../common/opcodes";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
+import { PreBuiltFunctions } from "../preamble/preamble";
+
+const instruction_to_string = (instruction: Instruction) => {
+  return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
+};
 
 const VALID_UNARY_OPERATORS = new Map([
   ["!", OpCodes.NOTG],
@@ -233,6 +244,24 @@ function compile_conditional(
   };
 }
 
+function reverse_in_group(instructions: Instructions, group_size: number) {
+  // Chunk based on group_size
+  const chunks = [];
+  for (let i = 0; i < instructions.length; i += group_size) {
+    chunks.push(instructions.slice(i, i + group_size));
+  }
+
+  // Reverse the chunks
+  chunks.reverse();
+
+  // Flatten the chunks
+  return chunks.flat();
+}
+
+type LockIndex = number; // address to the variable that points to the lock
+type DataIndex = number; // address of the data that the lock is protecting
+type LockDataMappping = Map<LockIndex, DataIndex>;
+
 class Rust2InstructionCompiler
   extends AbstractParseTreeVisitor<InstructionCompilerOutput>
   implements RustVisitor<InstructionCompilerOutput>
@@ -240,13 +269,24 @@ class Rust2InstructionCompiler
   language_version: string = "Rust2";
 
   private environments: Environment[] = [];
-  private closures: SVMFunction[] = [];
+  private closures: RVMFunction[] = [];
   private num_top_level_functions: number = 0;
+  private data_index: number | undefined;
+  private lock_data_mapping_stack: LockDataMappping[] = [];
+
+  private lock_guard_stack: Instructions[] = [];
+  private lock_guard_index: number[] = [];
+  private num_threads_to_join: number = 0;
+
+  private closure_counter: number = 0;
+  private alloc_counter: number[] = [];
+  private loop_counter: number[] = [];
 
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
   constructor(
     private static_context: CompileTimeContext,
+    private closure_map: Map<number, string[]>,
     debug_mode: boolean = false,
   ) {
     super();
@@ -257,7 +297,7 @@ class Rust2InstructionCompiler
     this.num_top_level_functions = num;
   }
 
-  getClosures(): SVMFunction[] {
+  getClosures(): RVMFunction[] {
     return this.closures;
   }
 
@@ -347,7 +387,7 @@ class Rust2InstructionCompiler
 
   visitString_literal(ctx: String_literalContext): InstructionCompilerOutput {
     this.print_fn("Visiting string_literal");
-    const value = ctx.text;
+    const value = ctx.text.slice(1, -1); // Remove the quotes
     return {
       ok: true,
       value: {
@@ -385,6 +425,7 @@ class Rust2InstructionCompiler
     this.print_fn("Visiting constant_declaration");
     const name = ctx.const_name().text;
     this.print_fn("Constant name: ", name);
+    this.alloc_counter[this.alloc_counter.length - 1] += 1;
 
     // Compile the expression
     const maybe_compiled_expression = this.visit(ctx.expression());
@@ -392,6 +433,14 @@ class Rust2InstructionCompiler
       return maybe_compiled_expression;
     }
     const compiled_expression = maybe_compiled_expression.value;
+
+    const maybe_rhs_func_appl = ctx.expression().function_application();
+    if (maybe_rhs_func_appl !== undefined) {
+      const fn_name = maybe_rhs_func_appl.function_name().text;
+      if (fn_name === "lock" || fn_name === "mutex_new") {
+        this.alloc_counter[this.alloc_counter.length - 1] += 1;
+      }
+    }
 
     // Add the opcode to the compiled expression
     const current_env = this.environments[this.environments.length - 1];
@@ -426,6 +475,7 @@ class Rust2InstructionCompiler
     this.print_fn("Visiting variable_declaration");
     const name = ctx.var_name().text;
     this.print_fn("Variable name: ", name);
+    this.alloc_counter[this.alloc_counter.length - 1] += 1;
 
     // Compile the expression
     const maybe_compiled_expression = this.visit(ctx.expression());
@@ -433,6 +483,14 @@ class Rust2InstructionCompiler
       return maybe_compiled_expression;
     }
     const compiled_expression = maybe_compiled_expression.value;
+
+    const maybe_rhs_func_appl = ctx.expression().function_application();
+    if (maybe_rhs_func_appl !== undefined) {
+      const fn_name = maybe_rhs_func_appl.function_name().text;
+      if (fn_name === "lock" || fn_name === "mutex_new") {
+        this.alloc_counter[this.alloc_counter.length - 1] += 1;
+      }
+    }
 
     // Add the opcode to the compiled expression
     const current_env = this.environments[this.environments.length - 1];
@@ -450,6 +508,15 @@ class Rust2InstructionCompiler
       { opcode: OpCodes.STLG, operands: [index] },
       { opcode: OpCodes.LGCU, operands: [] }, // Result of evaluating a declaration is `undefined`
     ]);
+
+    if (this.data_index !== undefined) {
+      // Variable must be a lock since there is a data_index
+      this.lock_data_mapping_stack[this.lock_data_mapping_stack.length - 1].set(
+        index,
+        this.data_index,
+      );
+      this.data_index = undefined;
+    }
 
     return {
       ok: true,
@@ -679,12 +746,68 @@ class Rust2InstructionCompiler
       return this.visitRefed_name(refed_name_ctx);
     }
 
+    // Case 14: loops
+    const loop_ctx = ctx.loop_expression();
+    if (loop_ctx !== undefined) {
+      return this.visitLoop_expression(loop_ctx);
+    }
+
+    // Case 15: immediate_closure_application
+    const immediate_closure_application_ctx =
+      ctx.immediate_closure_application();
+    if (immediate_closure_application_ctx !== undefined) {
+      return this.visitImmediate_closure_application(
+        immediate_closure_application_ctx,
+      );
+    }
+
+    // Case 16: break
+    const break_ctx = ctx.break_keyword();
+    if (break_ctx !== undefined) {
+      return this.visitBreak_keyword(break_ctx);
+    }
+
     return {
       ok: false,
       error: new CompilerError(
         ctx.start.line,
         "Not implemented: Unknown Case Expression",
       ),
+    };
+  }
+
+  visitBreak_keyword(ctx: Break_keywordContext): InstructionCompilerOutput {
+    this.print_fn("Visiting break_keyword");
+
+    const instructions: Instructions = [];
+
+    // Lock cleanup: Pop lock guards until the loop lock guard
+    const limit = this.lock_guard_index[this.lock_guard_index.length - 1];
+    for (let i = this.lock_guard_stack.length - 1; i >= limit; i--) {
+      const lock_guards = this.lock_guard_stack[i];
+      for (const lock_guard of reverse_in_group(lock_guards, 2)) {
+        instructions.push(lock_guard);
+      }
+    }
+
+    // Env cleanup: Pop environments until the loop environment
+    const current_environment_index = this.environments.length;
+    const new_environment_index =
+      this.loop_counter[this.loop_counter.length - 1];
+    for (let i = current_environment_index; i > new_environment_index; i--) {
+      instructions.push({ opcode: OpCodes.POPENV, operands: [] });
+    }
+
+    instructions.push(
+      { opcode: OpCodes.GOTO, operands: ["TODO"] },
+      { opcode: OpCodes.LGCU, operands: [] },
+    );
+    return {
+      ok: true,
+      value: {
+        max_stack_size: 0,
+        instructions,
+      },
     };
   }
 
@@ -877,11 +1000,24 @@ class Rust2InstructionCompiler
       parameter_env.push(param_name, param_type);
     }
 
+    // Copy some names that are captured
+    const closure_id = this.closure_counter;
+    this.closure_counter += 1;
+
+    const copied_names = this.closure_map.get(closure_id)?.slice() || [];
+
     // Compile the function body
     this.environments.push(parameter_env);
+    this.lock_guard_stack.push([]);
+    this.lock_data_mapping_stack.push(new Map());
     const fn_body = ctx.function_body();
-    const maybe_compiled_function = this.visitFunction_body(fn_body);
+    const maybe_compiled_function = this.visitFunction_body(
+      fn_body,
+      copied_names,
+    );
     this.environments.pop();
+    this.lock_data_mapping_stack.pop();
+    this.lock_guard_stack.pop();
     if (!maybe_compiled_function.ok) {
       return maybe_compiled_function;
     }
@@ -898,7 +1034,7 @@ class Rust2InstructionCompiler
     const function_instructions = maybe_compiled_function.value;
 
     // Store the function object
-    const function_obj: SVMFunction = {
+    const function_obj: RVMFunction = {
       stack_size: function_instructions.max_stack_size,
       environment_size: func_parameters.length + num_declarations,
       num_args: func_parameters.length,
@@ -943,6 +1079,15 @@ class Rust2InstructionCompiler
     if (!results.ok) {
       return results;
     }
+
+    const limit = this.lock_guard_index[this.lock_guard_index.length - 1];
+    for (let i = this.lock_guard_stack.length - 1; i >= limit; i--) {
+      const lock_guards = this.lock_guard_stack[i];
+      for (const lock_guard of reverse_in_group(lock_guards, 2)) {
+        results.value.instructions.push(lock_guard);
+      }
+    }
+
     results.value.instructions.push({ opcode: OpCodes.RETG, operands: [] });
     return results;
   }
@@ -962,11 +1107,29 @@ class Rust2InstructionCompiler
       },
     };
 
-    return compile_conditional(
-      this.visit(ctx.cond_expr()),
-      this.visit(ctx.block(0)),
-      ctx.block(1) !== undefined ? this.visit(ctx.block(1)) : noop,
-    );
+    const else_if_block = ctx.if_expression();
+    if (else_if_block !== undefined) {
+      return compile_conditional(
+        this.visit(ctx.cond_expr()),
+        this.visit(ctx.block(0)),
+        this.visit(else_if_block),
+      );
+    }
+
+    const else_block = ctx.block().length > 1 && ctx.block(1);
+    if (else_block != false) {
+      return compile_conditional(
+        this.visit(ctx.cond_expr()),
+        this.visit(ctx.block(0)),
+        this.visit(else_block),
+      );
+    } else {
+      return compile_conditional(
+        this.visit(ctx.cond_expr()),
+        this.visit(ctx.block(0)),
+        noop,
+      );
+    }
   }
 
   visitCond_expr(ctx: Cond_exprContext): InstructionCompilerOutput {
@@ -978,7 +1141,7 @@ class Rust2InstructionCompiler
     ctx: Function_applicationContext,
     function_name: string,
   ): InstructionCompilerOutput {
-    const instructions = [];
+    const instructions: Instructions = [];
 
     if (function_name === "println!") {
       // Load the arguments to the stack
@@ -1012,11 +1175,288 @@ class Rust2InstructionCompiler
       };
     }
 
+    if (function_name === "thread_spawn" || function_name === "scope_spawn") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            function_name +
+              " takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      const maybe_compiled_argument = this.visitExpression(expr[0]);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+
+      // Closure is created
+      // NEWC -> NEWT 2 -> GOTO 3 -> CALL -> ENDT
+      instructions.push(...maybe_compiled_argument.value.instructions);
+      instructions.push({ opcode: OpCodes.NEWT, operands: [2] });
+      instructions.push({ opcode: OpCodes.GOTO, operands: [4] });
+      instructions.push({ opcode: OpCodes.POPG, operands: [] });
+      instructions.push({ opcode: OpCodes.CALL, operands: [0] });
+      instructions.push({ opcode: OpCodes.ENDT, operands: [] });
+
+      // At the end; thread_id is pushed to the stack
+      if (function_name === "scope_spawn") {
+        // Compiler is responsible for joining the threads correctly
+        this.num_threads_to_join += 1;
+
+        // scope_spawn pushes the thread_id to the stack --> We don't want to pop it
+        // so we push undefined to the stack
+        instructions.push({ opcode: OpCodes.LGCU, operands: [] });
+      }
+      return {
+        ok: true,
+        value: {
+          max_stack_size: maybe_compiled_argument.value.max_stack_size,
+          instructions,
+        },
+      };
+    }
+
+    if (function_name === "thread_join") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "thread_join takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      const maybe_compiled_argument = this.visitExpression(expr[0]);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+
+      instructions.push(...maybe_compiled_argument.value.instructions);
+      instructions.push({ opcode: OpCodes.JOIN, operands: [] });
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: maybe_compiled_argument.value.max_stack_size,
+          instructions,
+        },
+      };
+    }
+
+    if (function_name === "mutex_new") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "thread_join takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      // Compile the expression
+      const maybe_compiled_expression = this.visitExpression(expr[0]);
+      if (!maybe_compiled_expression.ok) {
+        return maybe_compiled_expression;
+      }
+      const compiled_expression = maybe_compiled_expression.value;
+      instructions.push(...compiled_expression.instructions);
+
+      // Store the value into a variable
+      const current_env = this.environments[this.environments.length - 1];
+
+      // Safe: the name "->data" is an invalid variable name so it will never conflict
+      const data_index = current_env.push("->data", "i32"); // We don't actually care about the type here
+      this.data_index = data_index;
+      instructions.push({ opcode: OpCodes.STLG, operands: [data_index] });
+
+      // Create a lock
+      instructions.push({ opcode: OpCodes.NEWL, operands: [] });
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: compiled_expression.max_stack_size + 1,
+          instructions,
+        },
+      };
+    }
+
+    if (function_name === "scoped_threads") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "scoped_threads takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      const prev_num_threads_to_join = this.num_threads_to_join;
+
+      // Scoped threads takes in a closure, but we treat it as a block
+      const block_ctx = expr[0].closure()?.function_body()?.block();
+      if (block_ctx === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "scoped_threads takes in a closure that is compiled like a block.",
+          ),
+        };
+      }
+
+      const maybe_compiled_argument = this.visitBlock(block_ctx);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+      // Throw away the value of the block
+      instructions.push({
+        opcode: OpCodes.POPG,
+        operands: [],
+      });
+
+      const num_threads_to_join =
+        this.num_threads_to_join - prev_num_threads_to_join;
+      this.num_threads_to_join = prev_num_threads_to_join;
+
+      for (let i = 0; i < num_threads_to_join; i++) {
+        instructions.push({ opcode: OpCodes.JOIN, operands: [] });
+      }
+      instructions.push({ opcode: OpCodes.LGCU, operands: [] });
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: maybe_compiled_argument.value.max_stack_size,
+          instructions:
+            maybe_compiled_argument.value.instructions.concat(instructions),
+        },
+      };
+    }
+
+    if (function_name === "lock") {
+      const expr = ctx.args_list().args()?.expression();
+      if (expr === undefined || expr.length !== 1) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "lock takes exactly one argument. This is a Validator error.",
+          ),
+        };
+      }
+
+      // Compile the expression
+      const maybe_compiled_expression = this.visitExpression(expr[0]);
+      if (!maybe_compiled_expression.ok) {
+        return maybe_compiled_expression;
+      }
+      const compiled_expression = maybe_compiled_expression.value;
+      instructions.push(...compiled_expression.instructions);
+
+      // Lock the mutex
+      instructions.push({ opcode: OpCodes.LOCK, operands: [] });
+
+      // Expression type has to be a lock: either this.data_index
+      // is protected...
+      if (this.data_index !== undefined) {
+        instructions.push({
+          opcode: OpCodes.LDPA,
+          operands: [this.data_index, 0], // Load address of protected data
+        });
+      } else {
+        // ...or, we can look up the protected data
+        const load_instr = compiled_expression.instructions.at(-1);
+        if (
+          load_instr?.opcode !== OpCodes.LDPG &&
+          load_instr?.opcode !== OpCodes.LDLG
+        ) {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "Last instruction is not a load instruction! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        const parent_env_index =
+          load_instr.opcode === OpCodes.LDLG ? 0 : load_instr.operands[1];
+        if (typeof parent_env_index !== "number") {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "parent_env_index is not a number! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        const lock_index = load_instr.operands[0];
+        // Error if lock_index is not a number
+        if (typeof lock_index !== "number") {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "lock_index is not a number! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        const data_index =
+          this.lock_data_mapping_stack[
+            this.lock_data_mapping_stack.length - 1 - parent_env_index
+          ].get(lock_index);
+        if (data_index === undefined) {
+          return {
+            ok: false,
+            error: new CompilerError(
+              ctx.start.line,
+              "data_index is undefined! This is a Compiler bug.",
+            ),
+          };
+        }
+
+        instructions.push({
+          opcode: OpCodes.LDPA,
+          operands: [data_index, parent_env_index],
+        });
+
+        // Register the lock guard
+        this.lock_guard_stack[this.lock_guard_stack.length - 1].push(
+          load_instr,
+        );
+        this.lock_guard_stack[this.lock_guard_stack.length - 1].push({
+          opcode: OpCodes.UNLOCK,
+          operands: [],
+        });
+      }
+
+      return {
+        ok: true,
+        value: {
+          max_stack_size: compiled_expression.max_stack_size + 1,
+          instructions,
+        },
+      };
+    }
+
     return {
       ok: false,
       error: new CompilerError(
         ctx.start.line,
-        `Function ${function_name} not found in environment. This is a Validator error.`,
+        `Pre-built function ${function_name} is not implemented in the Compiler.`,
       ),
     };
   }
@@ -1032,11 +1472,21 @@ class Rust2InstructionCompiler
       function_name,
     );
 
-    if (maybe_lookup_success === undefined) {
+    if (
+      maybe_lookup_success === undefined &&
+      PreBuiltFunctions.has(function_name)
+    ) {
       // Function not found in environment --> Function must originate from
       // compile-time context (i.e. a built-in function)
-
       return this.compile_built_in_function(ctx, function_name);
+    } else if (maybe_lookup_success === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          `Function ${function_name} not found in environment but not a built-in function. This is a Validator error.`,
+        ),
+      };
     }
 
     const instructions = [];
@@ -1084,28 +1534,72 @@ class Rust2InstructionCompiler
     };
   }
 
-  visitBlock(ctx: BlockContext): InstructionCompilerOutput {
+  visitBlock(
+    ctx: BlockContext,
+    copied_names: string[] = [],
+  ): InstructionCompilerOutput {
     // Block := statement* expression?
     this.print_fn("Visiting block");
 
     const instructions: Instructions = [];
+    this.alloc_counter.push(0);
+
+    // Save lock guard stack limit
+    this.lock_guard_index.push(this.lock_guard_stack.length);
 
     // Count number of declarations
-    const num_declarations = ctx
-      .statement()
-      .filter(
-        (x) =>
-          x.constant_declaration() !== undefined ||
-          x.variable_declaration() !== undefined,
-      ).length;
+    const num_declarations =
+      ctx
+        .statement()
+        .filter(
+          (x) =>
+            x.constant_declaration() !== undefined ||
+            x.variable_declaration() !== undefined,
+        ).length + copied_names.length;
 
     // Create a new environment
     if (num_declarations > 0) {
       this.environments.push(new Environment());
+      this.lock_guard_stack.push([]);
+      this.lock_data_mapping_stack.push(new Map());
       instructions.push({
         opcode: OpCodes.NEWENV,
-        operands: [num_declarations],
+        operands: ["TODO"],
       });
+    }
+
+    // Compile the copied names
+    for (const name of copied_names) {
+      // Look up the name in the environment
+      const maybe_lookup_success = name_recursive_lookup(
+        this.environments,
+        name,
+      );
+      if (maybe_lookup_success === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            `Unknown variable ${name}. This is a ValidatorError!`,
+          ),
+        };
+      }
+
+      const current_env = this.environments[this.environments.length - 1];
+      const current_env_index = current_env.push(name, "i32"); // We don't actually care about the type here
+
+      const [env_index, index] = maybe_lookup_success;
+      const parent_index = this.environments.length - 1 - env_index;
+
+      const load_instr = {
+        opcode: OpCodes.LDPG,
+        operands: [index, parent_index],
+      };
+      const store_instr = {
+        opcode: OpCodes.STLG,
+        operands: [current_env_index],
+      };
+      instructions.push(load_instr, store_instr);
     }
 
     // Compile the statements
@@ -1143,11 +1637,55 @@ class Rust2InstructionCompiler
       instructions.push({ opcode: OpCodes.LGCU, operands: [] });
     }
 
+    const cleanup_target = instructions.length;
+    console.log("cleanup_target", cleanup_target);
+    for (const [index, instr] of instructions.entries()) {
+      if (instr.opcode === OpCodes.GOTO && instr.operands[0] === "TODO") {
+        console.log("Jump to: ", cleanup_target - index + 1);
+        // instr.operands[0] = cleanup_target - index + 1;
+      }
+    }
+
     // Pop the environment
+    let num_protected_data = 0;
     if (num_declarations > 0) {
+      const locks_in_scope = this.lock_guard_stack.pop();
+      if (locks_in_scope === undefined) {
+        return {
+          ok: false,
+          error: new CompilerError(
+            ctx.start.line,
+            "Locks in scope is undefined. This is a Compiler bug.",
+          ),
+        };
+      }
+      num_protected_data = locks_in_scope.length / 2;
+
+      instructions.push(...reverse_in_group(locks_in_scope as Instructions, 2));
       instructions.push({ opcode: OpCodes.POPENV, operands: [] });
       this.environments.pop();
+      this.lock_data_mapping_stack.pop();
     }
+
+    // Update NEWENV operand
+    const num_allocs = this.alloc_counter.pop();
+    if (num_allocs === undefined) {
+      return {
+        ok: false,
+        error: new CompilerError(
+          ctx.start.line,
+          "Num allocs is undefined. This is a Compiler bug.",
+        ),
+      };
+    }
+    for (const instr of instructions) {
+      if (instr.opcode === OpCodes.NEWENV && instr.operands[0] === "TODO") {
+        instr.operands = [num_allocs];
+      }
+    }
+
+    // Remove saved lock guard stack limit
+    this.lock_guard_index.pop();
 
     return {
       ok: true,
@@ -1158,9 +1696,12 @@ class Rust2InstructionCompiler
     };
   }
 
-  visitFunction_body(ctx: Function_bodyContext): InstructionCompilerOutput {
+  visitFunction_body(
+    ctx: Function_bodyContext,
+    copied_names: string[] = [],
+  ): InstructionCompilerOutput {
     this.print_fn("Visiting function_body");
-    const results = this.visitBlock(ctx.block());
+    const results = this.visitBlock(ctx.block(), copied_names);
     if (!results.ok) {
       return results;
     }
@@ -1210,6 +1751,123 @@ class Rust2InstructionCompiler
       ),
     };
   }
+
+  visitLoop_expression(ctx: Loop_expressionContext): InstructionCompilerOutput {
+    this.loop_counter.push(this.environments.length);
+    const results = this.visitChildren(ctx);
+    this.loop_counter.pop();
+    return results;
+  }
+
+  visitInfinite_loop(ctx: Infinite_loopContext): InstructionCompilerOutput {
+    const instructions = [];
+    const block_instructions = this.visitBlock(ctx.block());
+    if (!block_instructions.ok) {
+      return block_instructions;
+    }
+
+    const move_up_by = block_instructions.value.instructions.length;
+    instructions.push(...block_instructions.value.instructions);
+    instructions.push({ opcode: OpCodes.POPG, operands: [] }); // Throw away block's value
+    instructions.push({ opcode: OpCodes.GOTO, operands: [-move_up_by - 1] });
+    const jump_target = instructions.length;
+    instructions.push({ opcode: OpCodes.LGCU, operands: [] });
+
+    for (const [index, instr] of instructions.entries()) {
+      if (instr.opcode === OpCodes.GOTO && instr.operands[0] === "TODO") {
+        instr.operands[0] = jump_target - index;
+      }
+    }
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: block_instructions.value.max_stack_size,
+        instructions: instructions,
+      },
+    };
+  }
+
+  visitWhile_loop(ctx: While_loopContext): InstructionCompilerOutput {
+    const instructions = [];
+    const cond_expr = this.visit(ctx.cond_expr());
+    if (!cond_expr.ok) {
+      return cond_expr;
+    }
+
+    const block_instructions = this.visitBlock(ctx.block());
+    if (!block_instructions.ok) {
+      return block_instructions;
+    }
+
+    const move_up_by =
+      block_instructions.value.instructions.length +
+      cond_expr.value.instructions.length +
+      2;
+    instructions.push(...cond_expr.value.instructions);
+    instructions.push({
+      opcode: OpCodes.BRF,
+      operands: [move_up_by],
+    });
+    instructions.push(...block_instructions.value.instructions);
+    instructions.push({ opcode: OpCodes.GOTO, operands: [-move_up_by] });
+    const jump_target = instructions.length;
+    instructions.push({ opcode: OpCodes.LGCU, operands: [] });
+
+    for (const [index, instr] of instructions.entries()) {
+      if (instr.opcode === OpCodes.GOTO && instr.operands[0] === "TODO") {
+        instr.operands[0] = jump_target - index;
+      }
+    }
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: Math.max(
+          cond_expr.value.max_stack_size,
+          block_instructions.value.max_stack_size,
+        ),
+        instructions,
+      },
+    };
+  }
+
+  visitImmediate_closure_application(
+    ctx: Immediate_closure_applicationContext,
+  ): InstructionCompilerOutput {
+    // Compile the closure first
+    const closure_instructions = this.visitClosure(ctx.closure());
+    if (!closure_instructions.ok) {
+      return closure_instructions;
+    }
+
+    // Load the arguments to the stack
+    const args_list = ctx.args_list().args()?.expression() || [];
+    const num_args = args_list.length;
+    for (const argument of ctx.args_list().args()?.expression() || []) {
+      const maybe_compiled_argument = this.visitExpression(argument);
+      if (!maybe_compiled_argument.ok) {
+        return maybe_compiled_argument;
+      }
+      closure_instructions.value.instructions.push(
+        ...maybe_compiled_argument.value.instructions,
+      );
+    }
+
+    // Call the closure
+    closure_instructions.value.instructions.push({
+      opcode: OpCodes.CALL,
+      operands: [num_args],
+    });
+
+    return {
+      ok: true,
+      value: {
+        max_stack_size: args_list.length + 1,
+        instructions: closure_instructions.value.instructions,
+      },
+    };
+  }
 }
 
 export class Rust2Compiler
@@ -1223,12 +1881,16 @@ export class Rust2Compiler
 
   private constant_env: CompileTimeContext = new CompileTimeContext();
   private function_env: Environment = new Environment();
-  private functions: SVMFunction[] = [];
+  private functions: RVMFunction[] = [];
 
-  constructor(private debug_mode: boolean) {
+  constructor(
+    private closure_map: Map<number, string[]>, // Map from closure id to the names of the variables it needs to copy
+    private debug_mode: boolean,
+  ) {
     super();
     this.instruction_compiler = new Rust2InstructionCompiler(
       this.constant_env,
+      this.closure_map,
       debug_mode,
     );
     this.compile_time_evaluator = new Rust2CompileTimeEvaluator();
@@ -1325,10 +1987,10 @@ export class Rust2Compiler
 
     const initial_instructions: Instructions = [];
     for (const func_decl of function_decls) {
-      const function_name = func_decl.function_name().text;
-      const type = func_decl.type().text;
+      const function_name = func_decl!.function_name().text;
+      const type = func_decl!.type().text;
 
-      const parameter_list = func_decl.parameter_list();
+      const parameter_list = func_decl!.parameter_list();
       const num_args = parameter_list.parameters()?.parameter().length || 0;
 
       // Add to the environment
@@ -1374,9 +2036,9 @@ export class Rust2Compiler
       function_addr++
     ) {
       const func_decl = function_decls[function_addr];
-      const func_body = func_decl.function_body();
+      const func_body = func_decl!.function_body();
       const func_parameters =
-        func_decl.parameter_list().parameters()?.parameter() || [];
+        func_decl!.parameter_list().parameters()?.parameter() || [];
       const parameter_env = new Environment();
 
       // Add parameters to the parameter environment
@@ -1453,7 +2115,7 @@ export class Rust2Compiler
         console.log("Num args: ", this.functions[i].num_args);
         console.log("Instructions: ");
         for (const instr of this.functions[i].instructions) {
-          console.log("\t", OpCodes[instr.opcode], instr.operands);
+          console.log("\t", instruction_to_string(instr));
         }
       }
     }

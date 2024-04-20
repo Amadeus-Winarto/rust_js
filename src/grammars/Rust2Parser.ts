@@ -70,9 +70,14 @@ export class Rust2Parser extends Parser {
   public static readonly T__41 = 42;
   public static readonly T__42 = 43;
   public static readonly T__43 = 44;
-  public static readonly JUNK = 45;
-  public static readonly NUMBER = 46;
-  public static readonly IDENTIFIER = 47;
+  public static readonly T__44 = 45;
+  public static readonly T__45 = 46;
+  public static readonly STRING = 47;
+  public static readonly JUNK = 48;
+  public static readonly NUMBER = 49;
+  public static readonly IDENTIFIER = 50;
+  public static readonly COMMENT = 51;
+  public static readonly MULTILINE_COMMENT = 52;
   public static readonly RULE_program = 0;
   public static readonly RULE_program_element = 1;
   public static readonly RULE_statement = 2;
@@ -82,42 +87,47 @@ export class Rust2Parser extends Parser {
   public static readonly RULE_function_declaration = 6;
   public static readonly RULE_return_expression = 7;
   public static readonly RULE_expression = 8;
-  public static readonly RULE_refed_name = 9;
-  public static readonly RULE_immutable_refed_name = 10;
-  public static readonly RULE_mutable_refed_name = 11;
-  public static readonly RULE_derefed_name = 12;
-  public static readonly RULE_assignment = 13;
-  public static readonly RULE_closure = 14;
-  public static readonly RULE_closure_parameter_list = 15;
-  public static readonly RULE_parens_expression = 16;
-  public static readonly RULE_if_expression = 17;
-  public static readonly RULE_cond_expr = 18;
-  public static readonly RULE_args_list = 19;
-  public static readonly RULE_args = 20;
-  public static readonly RULE_function_application = 21;
-  public static readonly RULE_block = 22;
-  public static readonly RULE_function_body = 23;
-  public static readonly RULE_parameter_list = 24;
-  public static readonly RULE_parameter = 25;
-  public static readonly RULE_parameters = 26;
-  public static readonly RULE_binary_operator = 27;
-  public static readonly RULE_unary_operator = 28;
-  public static readonly RULE_binary_logical_operator = 29;
-  public static readonly RULE_literal = 30;
-  public static readonly RULE_integer_literal = 31;
-  public static readonly RULE_float_literal = 32;
-  public static readonly RULE_boolean_literal = 33;
-  public static readonly RULE_string_literal = 34;
-  public static readonly RULE_string_characters = 35;
-  public static readonly RULE_type = 36;
-  public static readonly RULE_primitive_type = 37;
-  public static readonly RULE_borrowed_type = 38;
-  public static readonly RULE_borrowed_mutable_type = 39;
-  public static readonly RULE_print_macro = 40;
-  public static readonly RULE_name = 41;
-  public static readonly RULE_const_name = 42;
-  public static readonly RULE_var_name = 43;
-  public static readonly RULE_function_name = 44;
+  public static readonly RULE_break_keyword = 9;
+  public static readonly RULE_loop_expression = 10;
+  public static readonly RULE_infinite_loop = 11;
+  public static readonly RULE_while_loop = 12;
+  public static readonly RULE_refed_name = 13;
+  public static readonly RULE_immutable_refed_name = 14;
+  public static readonly RULE_mutable_refed_name = 15;
+  public static readonly RULE_derefed_name = 16;
+  public static readonly RULE_assignment = 17;
+  public static readonly RULE_closure = 18;
+  public static readonly RULE_closure_parameter_list = 19;
+  public static readonly RULE_immediate_closure_application = 20;
+  public static readonly RULE_parens_expression = 21;
+  public static readonly RULE_if_expression = 22;
+  public static readonly RULE_cond_expr = 23;
+  public static readonly RULE_args_list = 24;
+  public static readonly RULE_args = 25;
+  public static readonly RULE_function_application = 26;
+  public static readonly RULE_block = 27;
+  public static readonly RULE_function_body = 28;
+  public static readonly RULE_parameter_list = 29;
+  public static readonly RULE_parameter = 30;
+  public static readonly RULE_parameters = 31;
+  public static readonly RULE_binary_operator = 32;
+  public static readonly RULE_unary_operator = 33;
+  public static readonly RULE_binary_logical_operator = 34;
+  public static readonly RULE_literal = 35;
+  public static readonly RULE_integer_literal = 36;
+  public static readonly RULE_float_literal = 37;
+  public static readonly RULE_boolean_literal = 38;
+  public static readonly RULE_string_literal = 39;
+  public static readonly RULE_type = 40;
+  public static readonly RULE_primitive_type = 41;
+  public static readonly RULE_generic_mutex_type = 42;
+  public static readonly RULE_borrowed_type = 43;
+  public static readonly RULE_borrowed_mutable_type = 44;
+  public static readonly RULE_print_macro = 45;
+  public static readonly RULE_name = 46;
+  public static readonly RULE_const_name = 47;
+  public static readonly RULE_var_name = 48;
+  public static readonly RULE_function_name = 49;
   // tslint:disable:no-trailing-whitespace
   public static readonly ruleNames: string[] = [
     "program",
@@ -129,6 +139,10 @@ export class Rust2Parser extends Parser {
     "function_declaration",
     "return_expression",
     "expression",
+    "break_keyword",
+    "loop_expression",
+    "infinite_loop",
+    "while_loop",
     "refed_name",
     "immutable_refed_name",
     "mutable_refed_name",
@@ -136,6 +150,7 @@ export class Rust2Parser extends Parser {
     "assignment",
     "closure",
     "closure_parameter_list",
+    "immediate_closure_application",
     "parens_expression",
     "if_expression",
     "cond_expr",
@@ -155,9 +170,9 @@ export class Rust2Parser extends Parser {
     "float_literal",
     "boolean_literal",
     "string_literal",
-    "string_characters",
     "type",
     "primitive_type",
+    "generic_mutex_type",
     "borrowed_type",
     "borrowed_mutable_type",
     "print_macro",
@@ -178,6 +193,9 @@ export class Rust2Parser extends Parser {
     "'fn'",
     "'->'",
     "'return'",
+    "'break'",
+    "'loop'",
+    "'while'",
     "'&'",
     "'&mut'",
     "'*'",
@@ -206,12 +224,11 @@ export class Rust2Parser extends Parser {
     "'.'",
     "'true'",
     "'false'",
-    "'\"'",
-    "'\\'",
     "'i32'",
     "'f32'",
     "'bool'",
     "'str'",
+    "'Mutex<'",
     "'println!'",
   ];
   private static readonly _SYMBOLIC_NAMES: Array<string | undefined> = [
@@ -260,9 +277,14 @@ export class Rust2Parser extends Parser {
     undefined,
     undefined,
     undefined,
+    undefined,
+    undefined,
+    "STRING",
     "JUNK",
     "NUMBER",
     "IDENTIFIER",
+    "COMMENT",
+    "MULTILINE_COMMENT",
   ];
   public static readonly VOCABULARY: Vocabulary = new VocabularyImpl(
     Rust2Parser._LITERAL_NAMES,
@@ -311,23 +333,23 @@ export class Rust2Parser extends Parser {
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 90;
+        this.state = 100;
         this.program_element();
-        this.state = 94;
+        this.state = 104;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         while (_la === Rust2Parser.T__1 || _la === Rust2Parser.T__6) {
           {
             {
-              this.state = 91;
+              this.state = 101;
               this.program_element();
             }
           }
-          this.state = 96;
+          this.state = 106;
           this._errHandler.sync(this);
           _la = this._input.LA(1);
         }
-        this.state = 97;
+        this.state = 107;
         this.match(Rust2Parser.EOF);
       }
     } catch (re) {
@@ -353,18 +375,18 @@ export class Rust2Parser extends Parser {
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 101;
+        this.state = 111;
         this._errHandler.sync(this);
         switch (this._input.LA(1)) {
           case Rust2Parser.T__1:
             {
-              this.state = 99;
+              this.state = 109;
               this.constant_declaration();
             }
             break;
           case Rust2Parser.T__6:
             {
-              this.state = 100;
+              this.state = 110;
               this.function_declaration();
             }
             break;
@@ -393,29 +415,29 @@ export class Rust2Parser extends Parser {
     );
     this.enterRule(_localctx, 4, Rust2Parser.RULE_statement);
     try {
-      this.state = 111;
+      this.state = 121;
       this._errHandler.sync(this);
       switch (this._input.LA(1)) {
         case Rust2Parser.T__1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 103;
+            this.state = 113;
             this.constant_declaration();
           }
           break;
         case Rust2Parser.T__4:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 104;
+            this.state = 114;
             this.variable_declaration();
           }
           break;
         case Rust2Parser.T__8:
           this.enterOuterAlt(_localctx, 3);
           {
-            this.state = 105;
+            this.state = 115;
             this.return_expression();
-            this.state = 106;
+            this.state = 116;
             this.match(Rust2Parser.T__0);
           }
           break;
@@ -425,21 +447,24 @@ export class Rust2Parser extends Parser {
         case Rust2Parser.T__12:
         case Rust2Parser.T__13:
         case Rust2Parser.T__14:
+        case Rust2Parser.T__15:
         case Rust2Parser.T__16:
-        case Rust2Parser.T__20:
+        case Rust2Parser.T__17:
+        case Rust2Parser.T__19:
         case Rust2Parser.T__23:
-        case Rust2Parser.T__32:
+        case Rust2Parser.T__26:
         case Rust2Parser.T__35:
-        case Rust2Parser.T__36:
-        case Rust2Parser.T__37:
-        case Rust2Parser.T__43:
+        case Rust2Parser.T__38:
+        case Rust2Parser.T__39:
+        case Rust2Parser.T__45:
+        case Rust2Parser.STRING:
         case Rust2Parser.NUMBER:
         case Rust2Parser.IDENTIFIER:
           this.enterOuterAlt(_localctx, 4);
           {
-            this.state = 108;
+            this.state = 118;
             this.expression(0);
-            this.state = 109;
+            this.state = 119;
             this.match(Rust2Parser.T__0);
           }
           break;
@@ -467,19 +492,19 @@ export class Rust2Parser extends Parser {
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 113;
+        this.state = 123;
         this.match(Rust2Parser.T__1);
-        this.state = 114;
+        this.state = 124;
         this.const_name();
-        this.state = 115;
+        this.state = 125;
         this.match(Rust2Parser.T__2);
-        this.state = 116;
+        this.state = 126;
         this.type();
-        this.state = 117;
+        this.state = 127;
         this.match(Rust2Parser.T__3);
-        this.state = 118;
+        this.state = 128;
         this.expression(0);
-        this.state = 119;
+        this.state = 129;
         this.match(Rust2Parser.T__0);
       }
     } catch (re) {
@@ -504,29 +529,29 @@ export class Rust2Parser extends Parser {
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 121;
+        this.state = 131;
         this.match(Rust2Parser.T__4);
-        this.state = 122;
+        this.state = 132;
         this.mutable();
-        this.state = 123;
+        this.state = 133;
         this.var_name();
-        this.state = 126;
+        this.state = 136;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if (_la === Rust2Parser.T__2) {
           {
-            this.state = 124;
+            this.state = 134;
             this.match(Rust2Parser.T__2);
-            this.state = 125;
+            this.state = 135;
             this.type();
           }
         }
 
-        this.state = 128;
+        this.state = 138;
         this.match(Rust2Parser.T__3);
-        this.state = 129;
+        this.state = 139;
         this.expression(0);
-        this.state = 130;
+        this.state = 140;
         this.match(Rust2Parser.T__0);
       }
     } catch (re) {
@@ -550,12 +575,12 @@ export class Rust2Parser extends Parser {
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 133;
+        this.state = 143;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if (_la === Rust2Parser.T__5) {
           {
-            this.state = 132;
+            this.state = 142;
             this.match(Rust2Parser.T__5);
           }
         }
@@ -581,17 +606,17 @@ export class Rust2Parser extends Parser {
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 135;
+        this.state = 145;
         this.match(Rust2Parser.T__6);
-        this.state = 136;
+        this.state = 146;
         this.function_name();
-        this.state = 137;
+        this.state = 147;
         this.parameter_list();
-        this.state = 138;
+        this.state = 148;
         this.match(Rust2Parser.T__7);
-        this.state = 139;
+        this.state = 149;
         this.type();
-        this.state = 140;
+        this.state = 150;
         this.function_body();
       }
     } catch (re) {
@@ -617,9 +642,9 @@ export class Rust2Parser extends Parser {
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 142;
+        this.state = 152;
         this.match(Rust2Parser.T__8);
-        this.state = 143;
+        this.state = 153;
         this.expression(0);
       }
     } catch (re) {
@@ -657,90 +682,111 @@ export class Rust2Parser extends Parser {
       let _alt: number;
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 159;
+        this.state = 172;
         this._errHandler.sync(this);
         switch (this.interpreter.adaptivePredict(this._input, 5, this._ctx)) {
           case 1:
             {
-              this.state = 146;
+              this.state = 156;
               this.literal();
             }
             break;
 
           case 2:
             {
-              this.state = 147;
+              this.state = 157;
               this.name();
             }
             break;
 
           case 3:
             {
-              this.state = 148;
+              this.state = 158;
               this.refed_name();
             }
             break;
 
           case 4:
             {
-              this.state = 149;
+              this.state = 159;
               this.derefed_name();
             }
             break;
 
           case 5:
             {
-              this.state = 150;
+              this.state = 160;
               this.block();
             }
             break;
 
           case 6:
             {
-              this.state = 151;
+              this.state = 161;
               this.assignment();
             }
             break;
 
           case 7:
             {
-              this.state = 152;
+              this.state = 162;
               this.closure();
             }
             break;
 
           case 8:
             {
-              this.state = 153;
+              this.state = 163;
               this.unary_operator();
-              this.state = 154;
-              this.expression(4);
+              this.state = 164;
+              this.expression(7);
             }
             break;
 
           case 9:
             {
-              this.state = 156;
+              this.state = 166;
               this.function_application();
             }
             break;
 
           case 10:
             {
-              this.state = 157;
-              this.parens_expression();
+              this.state = 167;
+              this.immediate_closure_application();
             }
             break;
 
           case 11:
             {
-              this.state = 158;
+              this.state = 168;
+              this.parens_expression();
+            }
+            break;
+
+          case 12:
+            {
+              this.state = 169;
+              this.break_keyword();
+            }
+            break;
+
+          case 13:
+            {
+              this.state = 170;
               this.if_expression();
+            }
+            break;
+
+          case 14:
+            {
+              this.state = 171;
+              this.loop_expression();
             }
             break;
         }
         this._ctx._stop = this._input.tryLT(-1);
-        this.state = 171;
+        this.state = 184;
         this._errHandler.sync(this);
         _alt = this.interpreter.adaptivePredict(this._input, 7, this._ctx);
         while (_alt !== 2 && _alt !== ATN.INVALID_ALT_NUMBER) {
@@ -750,7 +796,7 @@ export class Rust2Parser extends Parser {
             }
             _prevctx = _localctx;
             {
-              this.state = 169;
+              this.state = 182;
               this._errHandler.sync(this);
               switch (
                 this.interpreter.adaptivePredict(this._input, 6, this._ctx)
@@ -763,16 +809,16 @@ export class Rust2Parser extends Parser {
                       _startState,
                       Rust2Parser.RULE_expression,
                     );
-                    this.state = 161;
-                    if (!this.precpred(this._ctx, 6)) {
+                    this.state = 174;
+                    if (!this.precpred(this._ctx, 9)) {
                       throw this.createFailedPredicateException(
-                        "this.precpred(this._ctx, 6)",
+                        "this.precpred(this._ctx, 9)",
                       );
                     }
-                    this.state = 162;
+                    this.state = 175;
                     this.binary_operator();
-                    this.state = 163;
-                    this.expression(7);
+                    this.state = 176;
+                    this.expression(10);
                   }
                   break;
 
@@ -784,22 +830,22 @@ export class Rust2Parser extends Parser {
                       _startState,
                       Rust2Parser.RULE_expression,
                     );
-                    this.state = 165;
-                    if (!this.precpred(this._ctx, 5)) {
+                    this.state = 178;
+                    if (!this.precpred(this._ctx, 8)) {
                       throw this.createFailedPredicateException(
-                        "this.precpred(this._ctx, 5)",
+                        "this.precpred(this._ctx, 8)",
                       );
                     }
-                    this.state = 166;
+                    this.state = 179;
                     this.binary_logical_operator();
-                    this.state = 167;
-                    this.expression(6);
+                    this.state = 180;
+                    this.expression(9);
                   }
                   break;
               }
             }
           }
-          this.state = 173;
+          this.state = 186;
           this._errHandler.sync(this);
           _alt = this.interpreter.adaptivePredict(this._input, 7, this._ctx);
         }
@@ -818,27 +864,152 @@ export class Rust2Parser extends Parser {
     return _localctx;
   }
   // @RuleVersion(0)
+  public break_keyword(): Break_keywordContext {
+    let _localctx: Break_keywordContext = new Break_keywordContext(
+      this._ctx,
+      this.state,
+    );
+    this.enterRule(_localctx, 18, Rust2Parser.RULE_break_keyword);
+    try {
+      this.enterOuterAlt(_localctx, 1);
+      {
+        this.state = 187;
+        this.match(Rust2Parser.T__9);
+      }
+    } catch (re) {
+      if (re instanceof RecognitionException) {
+        _localctx.exception = re;
+        this._errHandler.reportError(this, re);
+        this._errHandler.recover(this, re);
+      } else {
+        throw re;
+      }
+    } finally {
+      this.exitRule();
+    }
+    return _localctx;
+  }
+  // @RuleVersion(0)
+  public loop_expression(): Loop_expressionContext {
+    let _localctx: Loop_expressionContext = new Loop_expressionContext(
+      this._ctx,
+      this.state,
+    );
+    this.enterRule(_localctx, 20, Rust2Parser.RULE_loop_expression);
+    try {
+      this.state = 191;
+      this._errHandler.sync(this);
+      switch (this._input.LA(1)) {
+        case Rust2Parser.T__10:
+          this.enterOuterAlt(_localctx, 1);
+          {
+            this.state = 189;
+            this.infinite_loop();
+          }
+          break;
+        case Rust2Parser.T__11:
+          this.enterOuterAlt(_localctx, 2);
+          {
+            this.state = 190;
+            this.while_loop();
+          }
+          break;
+        default:
+          throw new NoViableAltException(this);
+      }
+    } catch (re) {
+      if (re instanceof RecognitionException) {
+        _localctx.exception = re;
+        this._errHandler.reportError(this, re);
+        this._errHandler.recover(this, re);
+      } else {
+        throw re;
+      }
+    } finally {
+      this.exitRule();
+    }
+    return _localctx;
+  }
+  // @RuleVersion(0)
+  public infinite_loop(): Infinite_loopContext {
+    let _localctx: Infinite_loopContext = new Infinite_loopContext(
+      this._ctx,
+      this.state,
+    );
+    this.enterRule(_localctx, 22, Rust2Parser.RULE_infinite_loop);
+    try {
+      this.enterOuterAlt(_localctx, 1);
+      {
+        this.state = 193;
+        this.match(Rust2Parser.T__10);
+        this.state = 194;
+        this.block();
+      }
+    } catch (re) {
+      if (re instanceof RecognitionException) {
+        _localctx.exception = re;
+        this._errHandler.reportError(this, re);
+        this._errHandler.recover(this, re);
+      } else {
+        throw re;
+      }
+    } finally {
+      this.exitRule();
+    }
+    return _localctx;
+  }
+  // @RuleVersion(0)
+  public while_loop(): While_loopContext {
+    let _localctx: While_loopContext = new While_loopContext(
+      this._ctx,
+      this.state,
+    );
+    this.enterRule(_localctx, 24, Rust2Parser.RULE_while_loop);
+    try {
+      this.enterOuterAlt(_localctx, 1);
+      {
+        this.state = 196;
+        this.match(Rust2Parser.T__11);
+        this.state = 197;
+        this.cond_expr();
+        this.state = 198;
+        this.block();
+      }
+    } catch (re) {
+      if (re instanceof RecognitionException) {
+        _localctx.exception = re;
+        this._errHandler.reportError(this, re);
+        this._errHandler.recover(this, re);
+      } else {
+        throw re;
+      }
+    } finally {
+      this.exitRule();
+    }
+    return _localctx;
+  }
+  // @RuleVersion(0)
   public refed_name(): Refed_nameContext {
     let _localctx: Refed_nameContext = new Refed_nameContext(
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 18, Rust2Parser.RULE_refed_name);
+    this.enterRule(_localctx, 26, Rust2Parser.RULE_refed_name);
     try {
-      this.state = 176;
+      this.state = 202;
       this._errHandler.sync(this);
       switch (this._input.LA(1)) {
-        case Rust2Parser.T__9:
+        case Rust2Parser.T__12:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 174;
+            this.state = 200;
             this.immutable_refed_name();
           }
           break;
-        case Rust2Parser.T__10:
+        case Rust2Parser.T__13:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 175;
+            this.state = 201;
             this.mutable_refed_name();
           }
           break;
@@ -862,17 +1033,17 @@ export class Rust2Parser extends Parser {
   public immutable_refed_name(): Immutable_refed_nameContext {
     let _localctx: Immutable_refed_nameContext =
       new Immutable_refed_nameContext(this._ctx, this.state);
-    this.enterRule(_localctx, 20, Rust2Parser.RULE_immutable_refed_name);
+    this.enterRule(_localctx, 28, Rust2Parser.RULE_immutable_refed_name);
     try {
-      this.state = 182;
+      this.state = 208;
       this._errHandler.sync(this);
-      switch (this.interpreter.adaptivePredict(this._input, 9, this._ctx)) {
+      switch (this.interpreter.adaptivePredict(this._input, 10, this._ctx)) {
         case 1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 178;
-            this.match(Rust2Parser.T__9);
-            this.state = 179;
+            this.state = 204;
+            this.match(Rust2Parser.T__12);
+            this.state = 205;
             this.name();
           }
           break;
@@ -880,9 +1051,9 @@ export class Rust2Parser extends Parser {
         case 2:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 180;
-            this.match(Rust2Parser.T__9);
-            this.state = 181;
+            this.state = 206;
+            this.match(Rust2Parser.T__12);
+            this.state = 207;
             this.refed_name();
           }
           break;
@@ -906,17 +1077,17 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 22, Rust2Parser.RULE_mutable_refed_name);
+    this.enterRule(_localctx, 30, Rust2Parser.RULE_mutable_refed_name);
     try {
-      this.state = 188;
+      this.state = 214;
       this._errHandler.sync(this);
-      switch (this.interpreter.adaptivePredict(this._input, 10, this._ctx)) {
+      switch (this.interpreter.adaptivePredict(this._input, 11, this._ctx)) {
         case 1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 184;
-            this.match(Rust2Parser.T__10);
-            this.state = 185;
+            this.state = 210;
+            this.match(Rust2Parser.T__13);
+            this.state = 211;
             this.name();
           }
           break;
@@ -924,9 +1095,9 @@ export class Rust2Parser extends Parser {
         case 2:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 186;
-            this.match(Rust2Parser.T__10);
-            this.state = 187;
+            this.state = 212;
+            this.match(Rust2Parser.T__13);
+            this.state = 213;
             this.refed_name();
           }
           break;
@@ -950,17 +1121,17 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 24, Rust2Parser.RULE_derefed_name);
+    this.enterRule(_localctx, 32, Rust2Parser.RULE_derefed_name);
     try {
-      this.state = 194;
+      this.state = 220;
       this._errHandler.sync(this);
-      switch (this.interpreter.adaptivePredict(this._input, 11, this._ctx)) {
+      switch (this.interpreter.adaptivePredict(this._input, 12, this._ctx)) {
         case 1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 190;
-            this.match(Rust2Parser.T__11);
-            this.state = 191;
+            this.state = 216;
+            this.match(Rust2Parser.T__14);
+            this.state = 217;
             this.name();
           }
           break;
@@ -968,9 +1139,9 @@ export class Rust2Parser extends Parser {
         case 2:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 192;
-            this.match(Rust2Parser.T__11);
-            this.state = 193;
+            this.state = 218;
+            this.match(Rust2Parser.T__14);
+            this.state = 219;
             this.derefed_name();
           }
           break;
@@ -994,32 +1165,32 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 26, Rust2Parser.RULE_assignment);
+    this.enterRule(_localctx, 34, Rust2Parser.RULE_assignment);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 198;
+        this.state = 224;
         this._errHandler.sync(this);
         switch (this._input.LA(1)) {
-          case Rust2Parser.T__43:
+          case Rust2Parser.T__45:
           case Rust2Parser.IDENTIFIER:
             {
-              this.state = 196;
+              this.state = 222;
               this.name();
             }
             break;
-          case Rust2Parser.T__11:
+          case Rust2Parser.T__14:
             {
-              this.state = 197;
+              this.state = 223;
               this.derefed_name();
             }
             break;
           default:
             throw new NoViableAltException(this);
         }
-        this.state = 200;
+        this.state = 226;
         this.match(Rust2Parser.T__3);
-        this.state = 201;
+        this.state = 227;
         this.expression(0);
       }
     } catch (re) {
@@ -1038,17 +1209,17 @@ export class Rust2Parser extends Parser {
   // @RuleVersion(0)
   public closure(): ClosureContext {
     let _localctx: ClosureContext = new ClosureContext(this._ctx, this.state);
-    this.enterRule(_localctx, 28, Rust2Parser.RULE_closure);
+    this.enterRule(_localctx, 36, Rust2Parser.RULE_closure);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 203;
+        this.state = 229;
         this.closure_parameter_list();
-        this.state = 204;
+        this.state = 230;
         this.match(Rust2Parser.T__7);
-        this.state = 205;
+        this.state = 231;
         this.type();
-        this.state = 206;
+        this.state = 232;
         this.function_body();
       }
     } catch (re) {
@@ -1068,31 +1239,61 @@ export class Rust2Parser extends Parser {
   public closure_parameter_list(): Closure_parameter_listContext {
     let _localctx: Closure_parameter_listContext =
       new Closure_parameter_listContext(this._ctx, this.state);
-    this.enterRule(_localctx, 30, Rust2Parser.RULE_closure_parameter_list);
+    this.enterRule(_localctx, 38, Rust2Parser.RULE_closure_parameter_list);
     try {
-      this.state = 213;
+      this.state = 239;
       this._errHandler.sync(this);
       switch (this._input.LA(1)) {
-        case Rust2Parser.T__12:
+        case Rust2Parser.T__15:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 208;
-            this.match(Rust2Parser.T__12);
+            this.state = 234;
+            this.match(Rust2Parser.T__15);
           }
           break;
-        case Rust2Parser.T__13:
+        case Rust2Parser.T__16:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 209;
-            this.match(Rust2Parser.T__13);
-            this.state = 210;
+            this.state = 235;
+            this.match(Rust2Parser.T__16);
+            this.state = 236;
             this.parameters();
-            this.state = 211;
-            this.match(Rust2Parser.T__13);
+            this.state = 237;
+            this.match(Rust2Parser.T__16);
           }
           break;
         default:
           throw new NoViableAltException(this);
+      }
+    } catch (re) {
+      if (re instanceof RecognitionException) {
+        _localctx.exception = re;
+        this._errHandler.reportError(this, re);
+        this._errHandler.recover(this, re);
+      } else {
+        throw re;
+      }
+    } finally {
+      this.exitRule();
+    }
+    return _localctx;
+  }
+  // @RuleVersion(0)
+  public immediate_closure_application(): Immediate_closure_applicationContext {
+    let _localctx: Immediate_closure_applicationContext =
+      new Immediate_closure_applicationContext(this._ctx, this.state);
+    this.enterRule(
+      _localctx,
+      40,
+      Rust2Parser.RULE_immediate_closure_application,
+    );
+    try {
+      this.enterOuterAlt(_localctx, 1);
+      {
+        this.state = 241;
+        this.closure();
+        this.state = 242;
+        this.args_list();
       }
     } catch (re) {
       if (re instanceof RecognitionException) {
@@ -1113,16 +1314,16 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 32, Rust2Parser.RULE_parens_expression);
+    this.enterRule(_localctx, 42, Rust2Parser.RULE_parens_expression);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 215;
-        this.match(Rust2Parser.T__14);
-        this.state = 216;
+        this.state = 244;
+        this.match(Rust2Parser.T__17);
+        this.state = 245;
         this.expression(0);
-        this.state = 217;
-        this.match(Rust2Parser.T__15);
+        this.state = 246;
+        this.match(Rust2Parser.T__18);
       }
     } catch (re) {
       if (re instanceof RecognitionException) {
@@ -1143,35 +1344,35 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 34, Rust2Parser.RULE_if_expression);
+    this.enterRule(_localctx, 44, Rust2Parser.RULE_if_expression);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 219;
-        this.match(Rust2Parser.T__16);
-        this.state = 220;
+        this.state = 248;
+        this.match(Rust2Parser.T__19);
+        this.state = 249;
         this.cond_expr();
-        this.state = 221;
+        this.state = 250;
         this.block();
-        this.state = 227;
+        this.state = 256;
         this._errHandler.sync(this);
-        switch (this.interpreter.adaptivePredict(this._input, 15, this._ctx)) {
+        switch (this.interpreter.adaptivePredict(this._input, 16, this._ctx)) {
           case 1:
             {
-              this.state = 222;
-              this.match(Rust2Parser.T__17);
-              this.state = 225;
+              this.state = 251;
+              this.match(Rust2Parser.T__20);
+              this.state = 254;
               this._errHandler.sync(this);
               switch (this._input.LA(1)) {
-                case Rust2Parser.T__20:
+                case Rust2Parser.T__23:
                   {
-                    this.state = 223;
+                    this.state = 252;
                     this.block();
                   }
                   break;
-                case Rust2Parser.T__16:
+                case Rust2Parser.T__19:
                   {
-                    this.state = 224;
+                    this.state = 253;
                     this.if_expression();
                   }
                   break;
@@ -1201,11 +1402,11 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 36, Rust2Parser.RULE_cond_expr);
+    this.enterRule(_localctx, 46, Rust2Parser.RULE_cond_expr);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 229;
+        this.state = 258;
         this.expression(0);
       }
     } catch (re) {
@@ -1227,27 +1428,27 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 38, Rust2Parser.RULE_args_list);
+    this.enterRule(_localctx, 48, Rust2Parser.RULE_args_list);
     try {
-      this.state = 236;
+      this.state = 265;
       this._errHandler.sync(this);
       switch (this._input.LA(1)) {
-        case Rust2Parser.T__18:
+        case Rust2Parser.T__21:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 231;
-            this.match(Rust2Parser.T__18);
+            this.state = 260;
+            this.match(Rust2Parser.T__21);
           }
           break;
-        case Rust2Parser.T__14:
+        case Rust2Parser.T__17:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 232;
-            this.match(Rust2Parser.T__14);
-            this.state = 233;
+            this.state = 261;
+            this.match(Rust2Parser.T__17);
+            this.state = 262;
             this.args();
-            this.state = 234;
-            this.match(Rust2Parser.T__15);
+            this.state = 263;
+            this.match(Rust2Parser.T__18);
           }
           break;
         default:
@@ -1269,12 +1470,12 @@ export class Rust2Parser extends Parser {
   // @RuleVersion(0)
   public args(): ArgsContext {
     let _localctx: ArgsContext = new ArgsContext(this._ctx, this.state);
-    this.enterRule(_localctx, 40, Rust2Parser.RULE_args);
+    this.enterRule(_localctx, 50, Rust2Parser.RULE_args);
     let _la: number;
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 246;
+        this.state = 275;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if (
@@ -1286,37 +1487,40 @@ export class Rust2Parser extends Parser {
                 (1 << Rust2Parser.T__12) |
                 (1 << Rust2Parser.T__13) |
                 (1 << Rust2Parser.T__14) |
+                (1 << Rust2Parser.T__15) |
                 (1 << Rust2Parser.T__16) |
-                (1 << Rust2Parser.T__20) |
-                (1 << Rust2Parser.T__23))) !==
+                (1 << Rust2Parser.T__17) |
+                (1 << Rust2Parser.T__19) |
+                (1 << Rust2Parser.T__23) |
+                (1 << Rust2Parser.T__26))) !==
               0) ||
-          (((_la - 33) & ~0x1f) === 0 &&
-            ((1 << (_la - 33)) &
-              ((1 << (Rust2Parser.T__32 - 33)) |
-                (1 << (Rust2Parser.T__35 - 33)) |
-                (1 << (Rust2Parser.T__36 - 33)) |
-                (1 << (Rust2Parser.T__37 - 33)) |
-                (1 << (Rust2Parser.T__43 - 33)) |
-                (1 << (Rust2Parser.NUMBER - 33)) |
-                (1 << (Rust2Parser.IDENTIFIER - 33)))) !==
+          (((_la - 36) & ~0x1f) === 0 &&
+            ((1 << (_la - 36)) &
+              ((1 << (Rust2Parser.T__35 - 36)) |
+                (1 << (Rust2Parser.T__38 - 36)) |
+                (1 << (Rust2Parser.T__39 - 36)) |
+                (1 << (Rust2Parser.T__45 - 36)) |
+                (1 << (Rust2Parser.STRING - 36)) |
+                (1 << (Rust2Parser.NUMBER - 36)) |
+                (1 << (Rust2Parser.IDENTIFIER - 36)))) !==
               0)
         ) {
           {
-            this.state = 238;
+            this.state = 267;
             this.expression(0);
-            this.state = 243;
+            this.state = 272;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
-            while (_la === Rust2Parser.T__19) {
+            while (_la === Rust2Parser.T__22) {
               {
                 {
-                  this.state = 239;
-                  this.match(Rust2Parser.T__19);
-                  this.state = 240;
+                  this.state = 268;
+                  this.match(Rust2Parser.T__22);
+                  this.state = 269;
                   this.expression(0);
                 }
               }
-              this.state = 245;
+              this.state = 274;
               this._errHandler.sync(this);
               _la = this._input.LA(1);
             }
@@ -1340,13 +1544,13 @@ export class Rust2Parser extends Parser {
   public function_application(): Function_applicationContext {
     let _localctx: Function_applicationContext =
       new Function_applicationContext(this._ctx, this.state);
-    this.enterRule(_localctx, 42, Rust2Parser.RULE_function_application);
+    this.enterRule(_localctx, 52, Rust2Parser.RULE_function_application);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 248;
+        this.state = 277;
         this.function_name();
-        this.state = 249;
+        this.state = 278;
         this.args_list();
       }
     } catch (re) {
@@ -1365,31 +1569,31 @@ export class Rust2Parser extends Parser {
   // @RuleVersion(0)
   public block(): BlockContext {
     let _localctx: BlockContext = new BlockContext(this._ctx, this.state);
-    this.enterRule(_localctx, 44, Rust2Parser.RULE_block);
+    this.enterRule(_localctx, 54, Rust2Parser.RULE_block);
     let _la: number;
     try {
       let _alt: number;
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 251;
-        this.match(Rust2Parser.T__20);
-        this.state = 255;
+        this.state = 280;
+        this.match(Rust2Parser.T__23);
+        this.state = 284;
         this._errHandler.sync(this);
-        _alt = this.interpreter.adaptivePredict(this._input, 19, this._ctx);
+        _alt = this.interpreter.adaptivePredict(this._input, 20, this._ctx);
         while (_alt !== 2 && _alt !== ATN.INVALID_ALT_NUMBER) {
           if (_alt === 1) {
             {
               {
-                this.state = 252;
+                this.state = 281;
                 this.statement();
               }
             }
           }
-          this.state = 257;
+          this.state = 286;
           this._errHandler.sync(this);
-          _alt = this.interpreter.adaptivePredict(this._input, 19, this._ctx);
+          _alt = this.interpreter.adaptivePredict(this._input, 20, this._ctx);
         }
-        this.state = 259;
+        this.state = 288;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if (
@@ -1401,29 +1605,32 @@ export class Rust2Parser extends Parser {
                 (1 << Rust2Parser.T__12) |
                 (1 << Rust2Parser.T__13) |
                 (1 << Rust2Parser.T__14) |
+                (1 << Rust2Parser.T__15) |
                 (1 << Rust2Parser.T__16) |
-                (1 << Rust2Parser.T__20) |
-                (1 << Rust2Parser.T__23))) !==
+                (1 << Rust2Parser.T__17) |
+                (1 << Rust2Parser.T__19) |
+                (1 << Rust2Parser.T__23) |
+                (1 << Rust2Parser.T__26))) !==
               0) ||
-          (((_la - 33) & ~0x1f) === 0 &&
-            ((1 << (_la - 33)) &
-              ((1 << (Rust2Parser.T__32 - 33)) |
-                (1 << (Rust2Parser.T__35 - 33)) |
-                (1 << (Rust2Parser.T__36 - 33)) |
-                (1 << (Rust2Parser.T__37 - 33)) |
-                (1 << (Rust2Parser.T__43 - 33)) |
-                (1 << (Rust2Parser.NUMBER - 33)) |
-                (1 << (Rust2Parser.IDENTIFIER - 33)))) !==
+          (((_la - 36) & ~0x1f) === 0 &&
+            ((1 << (_la - 36)) &
+              ((1 << (Rust2Parser.T__35 - 36)) |
+                (1 << (Rust2Parser.T__38 - 36)) |
+                (1 << (Rust2Parser.T__39 - 36)) |
+                (1 << (Rust2Parser.T__45 - 36)) |
+                (1 << (Rust2Parser.STRING - 36)) |
+                (1 << (Rust2Parser.NUMBER - 36)) |
+                (1 << (Rust2Parser.IDENTIFIER - 36)))) !==
               0)
         ) {
           {
-            this.state = 258;
+            this.state = 287;
             this.expression(0);
           }
         }
 
-        this.state = 261;
-        this.match(Rust2Parser.T__21);
+        this.state = 290;
+        this.match(Rust2Parser.T__24);
       }
     } catch (re) {
       if (re instanceof RecognitionException) {
@@ -1444,11 +1651,11 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 46, Rust2Parser.RULE_function_body);
+    this.enterRule(_localctx, 56, Rust2Parser.RULE_function_body);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 263;
+        this.state = 292;
         this.block();
       }
     } catch (re) {
@@ -1470,27 +1677,27 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 48, Rust2Parser.RULE_parameter_list);
+    this.enterRule(_localctx, 58, Rust2Parser.RULE_parameter_list);
     try {
-      this.state = 270;
+      this.state = 299;
       this._errHandler.sync(this);
       switch (this._input.LA(1)) {
-        case Rust2Parser.T__18:
+        case Rust2Parser.T__21:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 265;
-            this.match(Rust2Parser.T__18);
+            this.state = 294;
+            this.match(Rust2Parser.T__21);
           }
           break;
-        case Rust2Parser.T__14:
+        case Rust2Parser.T__17:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 266;
-            this.match(Rust2Parser.T__14);
-            this.state = 267;
+            this.state = 295;
+            this.match(Rust2Parser.T__17);
+            this.state = 296;
             this.parameters();
-            this.state = 268;
-            this.match(Rust2Parser.T__15);
+            this.state = 297;
+            this.match(Rust2Parser.T__18);
           }
           break;
         default:
@@ -1515,15 +1722,15 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 50, Rust2Parser.RULE_parameter);
+    this.enterRule(_localctx, 60, Rust2Parser.RULE_parameter);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 272;
+        this.state = 301;
         this.match(Rust2Parser.IDENTIFIER);
-        this.state = 273;
+        this.state = 302;
         this.match(Rust2Parser.T__2);
-        this.state = 274;
+        this.state = 303;
         this.type();
       }
     } catch (re) {
@@ -1545,31 +1752,31 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 52, Rust2Parser.RULE_parameters);
+    this.enterRule(_localctx, 62, Rust2Parser.RULE_parameters);
     let _la: number;
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 284;
+        this.state = 313;
         this._errHandler.sync(this);
         _la = this._input.LA(1);
         if (_la === Rust2Parser.IDENTIFIER) {
           {
-            this.state = 276;
+            this.state = 305;
             this.parameter();
-            this.state = 281;
+            this.state = 310;
             this._errHandler.sync(this);
             _la = this._input.LA(1);
-            while (_la === Rust2Parser.T__19) {
+            while (_la === Rust2Parser.T__22) {
               {
                 {
-                  this.state = 277;
-                  this.match(Rust2Parser.T__19);
-                  this.state = 278;
+                  this.state = 306;
+                  this.match(Rust2Parser.T__22);
+                  this.state = 307;
                   this.parameter();
                 }
               }
-              this.state = 283;
+              this.state = 312;
               this._errHandler.sync(this);
               _la = this._input.LA(1);
             }
@@ -1595,28 +1802,28 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 54, Rust2Parser.RULE_binary_operator);
+    this.enterRule(_localctx, 64, Rust2Parser.RULE_binary_operator);
     let _la: number;
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 286;
+        this.state = 315;
         _la = this._input.LA(1);
         if (
           !(
-            ((_la - 12) & ~0x1f) === 0 &&
-            ((1 << (_la - 12)) &
-              ((1 << (Rust2Parser.T__11 - 12)) |
-                (1 << (Rust2Parser.T__22 - 12)) |
-                (1 << (Rust2Parser.T__23 - 12)) |
-                (1 << (Rust2Parser.T__24 - 12)) |
-                (1 << (Rust2Parser.T__25 - 12)) |
-                (1 << (Rust2Parser.T__26 - 12)) |
-                (1 << (Rust2Parser.T__27 - 12)) |
-                (1 << (Rust2Parser.T__28 - 12)) |
-                (1 << (Rust2Parser.T__29 - 12)) |
-                (1 << (Rust2Parser.T__30 - 12)) |
-                (1 << (Rust2Parser.T__31 - 12)))) !==
+            ((_la - 15) & ~0x1f) === 0 &&
+            ((1 << (_la - 15)) &
+              ((1 << (Rust2Parser.T__14 - 15)) |
+                (1 << (Rust2Parser.T__25 - 15)) |
+                (1 << (Rust2Parser.T__26 - 15)) |
+                (1 << (Rust2Parser.T__27 - 15)) |
+                (1 << (Rust2Parser.T__28 - 15)) |
+                (1 << (Rust2Parser.T__29 - 15)) |
+                (1 << (Rust2Parser.T__30 - 15)) |
+                (1 << (Rust2Parser.T__31 - 15)) |
+                (1 << (Rust2Parser.T__32 - 15)) |
+                (1 << (Rust2Parser.T__33 - 15)) |
+                (1 << (Rust2Parser.T__34 - 15)))) !==
               0
           )
         ) {
@@ -1649,14 +1856,14 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 56, Rust2Parser.RULE_unary_operator);
+    this.enterRule(_localctx, 66, Rust2Parser.RULE_unary_operator);
     let _la: number;
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 288;
+        this.state = 317;
         _la = this._input.LA(1);
-        if (!(_la === Rust2Parser.T__23 || _la === Rust2Parser.T__32)) {
+        if (!(_la === Rust2Parser.T__26 || _la === Rust2Parser.T__35)) {
           this._errHandler.recoverInline(this);
         } else {
           if (this._input.LA(1) === Token.EOF) {
@@ -1684,14 +1891,14 @@ export class Rust2Parser extends Parser {
   public binary_logical_operator(): Binary_logical_operatorContext {
     let _localctx: Binary_logical_operatorContext =
       new Binary_logical_operatorContext(this._ctx, this.state);
-    this.enterRule(_localctx, 58, Rust2Parser.RULE_binary_logical_operator);
+    this.enterRule(_localctx, 68, Rust2Parser.RULE_binary_logical_operator);
     let _la: number;
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 290;
+        this.state = 319;
         _la = this._input.LA(1);
-        if (!(_la === Rust2Parser.T__12 || _la === Rust2Parser.T__33)) {
+        if (!(_la === Rust2Parser.T__15 || _la === Rust2Parser.T__36)) {
           this._errHandler.recoverInline(this);
         } else {
           if (this._input.LA(1) === Token.EOF) {
@@ -1718,15 +1925,15 @@ export class Rust2Parser extends Parser {
   // @RuleVersion(0)
   public literal(): LiteralContext {
     let _localctx: LiteralContext = new LiteralContext(this._ctx, this.state);
-    this.enterRule(_localctx, 60, Rust2Parser.RULE_literal);
+    this.enterRule(_localctx, 70, Rust2Parser.RULE_literal);
     try {
-      this.state = 296;
+      this.state = 325;
       this._errHandler.sync(this);
-      switch (this.interpreter.adaptivePredict(this._input, 24, this._ctx)) {
+      switch (this.interpreter.adaptivePredict(this._input, 25, this._ctx)) {
         case 1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 292;
+            this.state = 321;
             this.integer_literal();
           }
           break;
@@ -1734,7 +1941,7 @@ export class Rust2Parser extends Parser {
         case 2:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 293;
+            this.state = 322;
             this.float_literal();
           }
           break;
@@ -1742,7 +1949,7 @@ export class Rust2Parser extends Parser {
         case 3:
           this.enterOuterAlt(_localctx, 3);
           {
-            this.state = 294;
+            this.state = 323;
             this.boolean_literal();
           }
           break;
@@ -1750,7 +1957,7 @@ export class Rust2Parser extends Parser {
         case 4:
           this.enterOuterAlt(_localctx, 4);
           {
-            this.state = 295;
+            this.state = 324;
             this.string_literal();
           }
           break;
@@ -1774,11 +1981,11 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 62, Rust2Parser.RULE_integer_literal);
+    this.enterRule(_localctx, 72, Rust2Parser.RULE_integer_literal);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 298;
+        this.state = 327;
         this.match(Rust2Parser.NUMBER);
       }
     } catch (re) {
@@ -1800,15 +2007,15 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 64, Rust2Parser.RULE_float_literal);
+    this.enterRule(_localctx, 74, Rust2Parser.RULE_float_literal);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 300;
+        this.state = 329;
         this.match(Rust2Parser.NUMBER);
-        this.state = 301;
-        this.match(Rust2Parser.T__34);
-        this.state = 302;
+        this.state = 330;
+        this.match(Rust2Parser.T__37);
+        this.state = 331;
         this.match(Rust2Parser.NUMBER);
       }
     } catch (re) {
@@ -1830,14 +2037,14 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 66, Rust2Parser.RULE_boolean_literal);
+    this.enterRule(_localctx, 76, Rust2Parser.RULE_boolean_literal);
     let _la: number;
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 304;
+        this.state = 333;
         _la = this._input.LA(1);
-        if (!(_la === Rust2Parser.T__35 || _la === Rust2Parser.T__36)) {
+        if (!(_la === Rust2Parser.T__38 || _la === Rust2Parser.T__39)) {
           this._errHandler.recoverInline(this);
         } else {
           if (this._input.LA(1) === Token.EOF) {
@@ -1867,122 +2074,12 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 68, Rust2Parser.RULE_string_literal);
-    let _la: number;
+    this.enterRule(_localctx, 78, Rust2Parser.RULE_string_literal);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 306;
-        this.match(Rust2Parser.T__37);
-        this.state = 310;
-        this._errHandler.sync(this);
-        _la = this._input.LA(1);
-        while (
-          ((_la & ~0x1f) === 0 &&
-            ((1 << _la) &
-              ((1 << Rust2Parser.T__0) |
-                (1 << Rust2Parser.T__1) |
-                (1 << Rust2Parser.T__2) |
-                (1 << Rust2Parser.T__3) |
-                (1 << Rust2Parser.T__4) |
-                (1 << Rust2Parser.T__5) |
-                (1 << Rust2Parser.T__6) |
-                (1 << Rust2Parser.T__7) |
-                (1 << Rust2Parser.T__8) |
-                (1 << Rust2Parser.T__9) |
-                (1 << Rust2Parser.T__10) |
-                (1 << Rust2Parser.T__11) |
-                (1 << Rust2Parser.T__12) |
-                (1 << Rust2Parser.T__13) |
-                (1 << Rust2Parser.T__14) |
-                (1 << Rust2Parser.T__15) |
-                (1 << Rust2Parser.T__16) |
-                (1 << Rust2Parser.T__17) |
-                (1 << Rust2Parser.T__18) |
-                (1 << Rust2Parser.T__19) |
-                (1 << Rust2Parser.T__20) |
-                (1 << Rust2Parser.T__21) |
-                (1 << Rust2Parser.T__22) |
-                (1 << Rust2Parser.T__23) |
-                (1 << Rust2Parser.T__24) |
-                (1 << Rust2Parser.T__25) |
-                (1 << Rust2Parser.T__26) |
-                (1 << Rust2Parser.T__27) |
-                (1 << Rust2Parser.T__28) |
-                (1 << Rust2Parser.T__29) |
-                (1 << Rust2Parser.T__30))) !==
-              0) ||
-          (((_la - 32) & ~0x1f) === 0 &&
-            ((1 << (_la - 32)) &
-              ((1 << (Rust2Parser.T__31 - 32)) |
-                (1 << (Rust2Parser.T__32 - 32)) |
-                (1 << (Rust2Parser.T__33 - 32)) |
-                (1 << (Rust2Parser.T__34 - 32)) |
-                (1 << (Rust2Parser.T__35 - 32)) |
-                (1 << (Rust2Parser.T__36 - 32)) |
-                (1 << (Rust2Parser.T__39 - 32)) |
-                (1 << (Rust2Parser.T__40 - 32)) |
-                (1 << (Rust2Parser.T__41 - 32)) |
-                (1 << (Rust2Parser.T__42 - 32)) |
-                (1 << (Rust2Parser.T__43 - 32)) |
-                (1 << (Rust2Parser.JUNK - 32)) |
-                (1 << (Rust2Parser.NUMBER - 32)) |
-                (1 << (Rust2Parser.IDENTIFIER - 32)))) !==
-              0)
-        ) {
-          {
-            {
-              this.state = 307;
-              this.string_characters();
-            }
-          }
-          this.state = 312;
-          this._errHandler.sync(this);
-          _la = this._input.LA(1);
-        }
-        this.state = 313;
-        this.match(Rust2Parser.T__37);
-      }
-    } catch (re) {
-      if (re instanceof RecognitionException) {
-        _localctx.exception = re;
-        this._errHandler.reportError(this, re);
-        this._errHandler.recover(this, re);
-      } else {
-        throw re;
-      }
-    } finally {
-      this.exitRule();
-    }
-    return _localctx;
-  }
-  // @RuleVersion(0)
-  public string_characters(): String_charactersContext {
-    let _localctx: String_charactersContext = new String_charactersContext(
-      this._ctx,
-      this.state,
-    );
-    this.enterRule(_localctx, 70, Rust2Parser.RULE_string_characters);
-    let _la: number;
-    try {
-      this.enterOuterAlt(_localctx, 1);
-      {
-        this.state = 315;
-        _la = this._input.LA(1);
-        if (
-          _la <= 0 ||
-          _la === Rust2Parser.T__37 ||
-          _la === Rust2Parser.T__38
-        ) {
-          this._errHandler.recoverInline(this);
-        } else {
-          if (this._input.LA(1) === Token.EOF) {
-            this.matchedEOF = true;
-          }
-
-          this._errHandler.reportMatch(this);
-          this.consume();
-        }
+        this.state = 335;
+        this.match(Rust2Parser.STRING);
       }
     } catch (re) {
       if (re instanceof RecognitionException) {
@@ -2000,33 +2097,34 @@ export class Rust2Parser extends Parser {
   // @RuleVersion(0)
   public type(): TypeContext {
     let _localctx: TypeContext = new TypeContext(this._ctx, this.state);
-    this.enterRule(_localctx, 72, Rust2Parser.RULE_type);
+    this.enterRule(_localctx, 80, Rust2Parser.RULE_type);
     try {
-      this.state = 320;
+      this.state = 340;
       this._errHandler.sync(this);
       switch (this._input.LA(1)) {
-        case Rust2Parser.T__18:
-        case Rust2Parser.T__39:
+        case Rust2Parser.T__21:
         case Rust2Parser.T__40:
         case Rust2Parser.T__41:
         case Rust2Parser.T__42:
+        case Rust2Parser.T__43:
+        case Rust2Parser.T__44:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 317;
+            this.state = 337;
             this.primitive_type();
           }
           break;
-        case Rust2Parser.T__9:
+        case Rust2Parser.T__12:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 318;
+            this.state = 338;
             this.borrowed_type();
           }
           break;
-        case Rust2Parser.T__10:
+        case Rust2Parser.T__13:
           this.enterOuterAlt(_localctx, 3);
           {
-            this.state = 319;
+            this.state = 339;
             this.borrowed_mutable_type();
           }
           break;
@@ -2052,34 +2150,85 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 74, Rust2Parser.RULE_primitive_type);
-    let _la: number;
+    this.enterRule(_localctx, 82, Rust2Parser.RULE_primitive_type);
+    try {
+      this.state = 348;
+      this._errHandler.sync(this);
+      switch (this._input.LA(1)) {
+        case Rust2Parser.T__40:
+          this.enterOuterAlt(_localctx, 1);
+          {
+            this.state = 342;
+            this.match(Rust2Parser.T__40);
+          }
+          break;
+        case Rust2Parser.T__41:
+          this.enterOuterAlt(_localctx, 2);
+          {
+            this.state = 343;
+            this.match(Rust2Parser.T__41);
+          }
+          break;
+        case Rust2Parser.T__42:
+          this.enterOuterAlt(_localctx, 3);
+          {
+            this.state = 344;
+            this.match(Rust2Parser.T__42);
+          }
+          break;
+        case Rust2Parser.T__43:
+          this.enterOuterAlt(_localctx, 4);
+          {
+            this.state = 345;
+            this.match(Rust2Parser.T__43);
+          }
+          break;
+        case Rust2Parser.T__21:
+          this.enterOuterAlt(_localctx, 5);
+          {
+            this.state = 346;
+            this.match(Rust2Parser.T__21);
+          }
+          break;
+        case Rust2Parser.T__44:
+          this.enterOuterAlt(_localctx, 6);
+          {
+            this.state = 347;
+            this.generic_mutex_type();
+          }
+          break;
+        default:
+          throw new NoViableAltException(this);
+      }
+    } catch (re) {
+      if (re instanceof RecognitionException) {
+        _localctx.exception = re;
+        this._errHandler.reportError(this, re);
+        this._errHandler.recover(this, re);
+      } else {
+        throw re;
+      }
+    } finally {
+      this.exitRule();
+    }
+    return _localctx;
+  }
+  // @RuleVersion(0)
+  public generic_mutex_type(): Generic_mutex_typeContext {
+    let _localctx: Generic_mutex_typeContext = new Generic_mutex_typeContext(
+      this._ctx,
+      this.state,
+    );
+    this.enterRule(_localctx, 84, Rust2Parser.RULE_generic_mutex_type);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 322;
-        _la = this._input.LA(1);
-        if (
-          !(
-            ((_la - 19) & ~0x1f) === 0 &&
-            ((1 << (_la - 19)) &
-              ((1 << (Rust2Parser.T__18 - 19)) |
-                (1 << (Rust2Parser.T__39 - 19)) |
-                (1 << (Rust2Parser.T__40 - 19)) |
-                (1 << (Rust2Parser.T__41 - 19)) |
-                (1 << (Rust2Parser.T__42 - 19)))) !==
-              0
-          )
-        ) {
-          this._errHandler.recoverInline(this);
-        } else {
-          if (this._input.LA(1) === Token.EOF) {
-            this.matchedEOF = true;
-          }
-
-          this._errHandler.reportMatch(this);
-          this.consume();
-        }
+        this.state = 350;
+        this.match(Rust2Parser.T__44);
+        this.state = 351;
+        this.type();
+        this.state = 352;
+        this.match(Rust2Parser.T__32);
       }
     } catch (re) {
       if (re instanceof RecognitionException) {
@@ -2100,17 +2249,17 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 76, Rust2Parser.RULE_borrowed_type);
+    this.enterRule(_localctx, 86, Rust2Parser.RULE_borrowed_type);
     try {
-      this.state = 328;
+      this.state = 358;
       this._errHandler.sync(this);
-      switch (this.interpreter.adaptivePredict(this._input, 27, this._ctx)) {
+      switch (this.interpreter.adaptivePredict(this._input, 28, this._ctx)) {
         case 1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 324;
-            this.match(Rust2Parser.T__9);
-            this.state = 325;
+            this.state = 354;
+            this.match(Rust2Parser.T__12);
+            this.state = 355;
             this.primitive_type();
           }
           break;
@@ -2118,9 +2267,9 @@ export class Rust2Parser extends Parser {
         case 2:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 326;
-            this.match(Rust2Parser.T__9);
-            this.state = 327;
+            this.state = 356;
+            this.match(Rust2Parser.T__12);
+            this.state = 357;
             this.type();
           }
           break;
@@ -2142,17 +2291,17 @@ export class Rust2Parser extends Parser {
   public borrowed_mutable_type(): Borrowed_mutable_typeContext {
     let _localctx: Borrowed_mutable_typeContext =
       new Borrowed_mutable_typeContext(this._ctx, this.state);
-    this.enterRule(_localctx, 78, Rust2Parser.RULE_borrowed_mutable_type);
+    this.enterRule(_localctx, 88, Rust2Parser.RULE_borrowed_mutable_type);
     try {
-      this.state = 334;
+      this.state = 364;
       this._errHandler.sync(this);
-      switch (this.interpreter.adaptivePredict(this._input, 28, this._ctx)) {
+      switch (this.interpreter.adaptivePredict(this._input, 29, this._ctx)) {
         case 1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 330;
-            this.match(Rust2Parser.T__10);
-            this.state = 331;
+            this.state = 360;
+            this.match(Rust2Parser.T__13);
+            this.state = 361;
             this.primitive_type();
           }
           break;
@@ -2160,9 +2309,9 @@ export class Rust2Parser extends Parser {
         case 2:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 332;
-            this.match(Rust2Parser.T__10);
-            this.state = 333;
+            this.state = 362;
+            this.match(Rust2Parser.T__13);
+            this.state = 363;
             this.type();
           }
           break;
@@ -2186,12 +2335,12 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 80, Rust2Parser.RULE_print_macro);
+    this.enterRule(_localctx, 90, Rust2Parser.RULE_print_macro);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 336;
-        this.match(Rust2Parser.T__43);
+        this.state = 366;
+        this.match(Rust2Parser.T__45);
       }
     } catch (re) {
       if (re instanceof RecognitionException) {
@@ -2209,15 +2358,15 @@ export class Rust2Parser extends Parser {
   // @RuleVersion(0)
   public name(): NameContext {
     let _localctx: NameContext = new NameContext(this._ctx, this.state);
-    this.enterRule(_localctx, 82, Rust2Parser.RULE_name);
+    this.enterRule(_localctx, 92, Rust2Parser.RULE_name);
     try {
-      this.state = 342;
+      this.state = 372;
       this._errHandler.sync(this);
-      switch (this.interpreter.adaptivePredict(this._input, 29, this._ctx)) {
+      switch (this.interpreter.adaptivePredict(this._input, 30, this._ctx)) {
         case 1:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 338;
+            this.state = 368;
             this.const_name();
           }
           break;
@@ -2225,7 +2374,7 @@ export class Rust2Parser extends Parser {
         case 2:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 339;
+            this.state = 369;
             this.var_name();
           }
           break;
@@ -2233,7 +2382,7 @@ export class Rust2Parser extends Parser {
         case 3:
           this.enterOuterAlt(_localctx, 3);
           {
-            this.state = 340;
+            this.state = 370;
             this.function_name();
           }
           break;
@@ -2241,7 +2390,7 @@ export class Rust2Parser extends Parser {
         case 4:
           this.enterOuterAlt(_localctx, 4);
           {
-            this.state = 341;
+            this.state = 371;
             this.print_macro();
           }
           break;
@@ -2265,11 +2414,11 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 84, Rust2Parser.RULE_const_name);
+    this.enterRule(_localctx, 94, Rust2Parser.RULE_const_name);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 344;
+        this.state = 374;
         this.match(Rust2Parser.IDENTIFIER);
       }
     } catch (re) {
@@ -2288,11 +2437,11 @@ export class Rust2Parser extends Parser {
   // @RuleVersion(0)
   public var_name(): Var_nameContext {
     let _localctx: Var_nameContext = new Var_nameContext(this._ctx, this.state);
-    this.enterRule(_localctx, 86, Rust2Parser.RULE_var_name);
+    this.enterRule(_localctx, 96, Rust2Parser.RULE_var_name);
     try {
       this.enterOuterAlt(_localctx, 1);
       {
-        this.state = 346;
+        this.state = 376;
         this.match(Rust2Parser.IDENTIFIER);
       }
     } catch (re) {
@@ -2314,22 +2463,22 @@ export class Rust2Parser extends Parser {
       this._ctx,
       this.state,
     );
-    this.enterRule(_localctx, 88, Rust2Parser.RULE_function_name);
+    this.enterRule(_localctx, 98, Rust2Parser.RULE_function_name);
     try {
-      this.state = 350;
+      this.state = 380;
       this._errHandler.sync(this);
       switch (this._input.LA(1)) {
         case Rust2Parser.IDENTIFIER:
           this.enterOuterAlt(_localctx, 1);
           {
-            this.state = 348;
+            this.state = 378;
             this.match(Rust2Parser.IDENTIFIER);
           }
           break;
-        case Rust2Parser.T__43:
+        case Rust2Parser.T__45:
           this.enterOuterAlt(_localctx, 2);
           {
-            this.state = 349;
+            this.state = 379;
             this.print_macro();
           }
           break;
@@ -2370,16 +2519,16 @@ export class Rust2Parser extends Parser {
   ): boolean {
     switch (predIndex) {
       case 0:
-        return this.precpred(this._ctx, 6);
+        return this.precpred(this._ctx, 9);
 
       case 1:
-        return this.precpred(this._ctx, 5);
+        return this.precpred(this._ctx, 8);
     }
     return true;
   }
 
   public static readonly _serializedATN: string =
-    "\x03\uC91D\uCABA\u058D\uAFBA\u4F53\u0607\uEA8B\uC241\x031\u0163\x04\x02" +
+    "\x03\uC91D\uCABA\u058D\uAFBA\u4F53\u0607\uEA8B\uC241\x036\u0181\x04\x02" +
     "\t\x02\x04\x03\t\x03\x04\x04\t\x04\x04\x05\t\x05\x04\x06\t\x06\x04\x07" +
     "\t\x07\x04\b\t\b\x04\t\t\t\x04\n\t\n\x04\v\t\v\x04\f\t\f\x04\r\t\r\x04" +
     "\x0E\t\x0E\x04\x0F\t\x0F\x04\x10\t\x10\x04\x11\t\x11\x04\x12\t\x12\x04" +
@@ -2387,157 +2536,172 @@ export class Rust2Parser extends Parser {
     "\x18\t\x18\x04\x19\t\x19\x04\x1A\t\x1A\x04\x1B\t\x1B\x04\x1C\t\x1C\x04" +
     '\x1D\t\x1D\x04\x1E\t\x1E\x04\x1F\t\x1F\x04 \t \x04!\t!\x04"\t"\x04#' +
     "\t#\x04$\t$\x04%\t%\x04&\t&\x04'\t'\x04(\t(\x04)\t)\x04*\t*\x04+\t+" +
-    "\x04,\t,\x04-\t-\x04.\t.\x03\x02\x03\x02\x07\x02_\n\x02\f\x02\x0E\x02" +
-    "b\v\x02\x03\x02\x03\x02\x03\x03\x03\x03\x05\x03h\n\x03\x03\x04\x03\x04" +
-    "\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x05\x04r\n\x04\x03\x05" +
-    "\x03\x05\x03\x05\x03\x05\x03\x05\x03\x05\x03\x05\x03\x05\x03\x06\x03\x06" +
-    "\x03\x06\x03\x06\x03\x06\x05\x06\x81\n\x06\x03\x06\x03\x06\x03\x06\x03" +
-    "\x06\x03\x07\x05\x07\x88\n\x07\x03\b\x03\b\x03\b\x03\b\x03\b\x03\b\x03" +
-    "\b\x03\t\x03\t\x03\t\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03" +
-    "\n\x03\n\x03\n\x03\n\x03\n\x03\n\x05\n\xA2\n\n\x03\n\x03\n\x03\n\x03\n" +
-    "\x03\n\x03\n\x03\n\x03\n\x07\n\xAC\n\n\f\n\x0E\n\xAF\v\n\x03\v\x03\v\x05" +
-    "\v\xB3\n\v\x03\f\x03\f\x03\f\x03\f\x05\f\xB9\n\f\x03\r\x03\r\x03\r\x03" +
-    "\r\x05\r\xBF\n\r\x03\x0E\x03\x0E\x03\x0E\x03\x0E\x05\x0E\xC5\n\x0E\x03" +
-    "\x0F\x03\x0F\x05\x0F\xC9\n\x0F\x03\x0F\x03\x0F\x03\x0F\x03\x10\x03\x10" +
-    "\x03\x10\x03\x10\x03\x10\x03\x11\x03\x11\x03\x11\x03\x11\x03\x11\x05\x11" +
-    "\xD8\n\x11\x03\x12\x03\x12\x03\x12\x03\x12\x03\x13\x03\x13\x03\x13\x03" +
-    "\x13\x03\x13\x03\x13\x05\x13\xE4\n\x13\x05\x13\xE6\n\x13\x03\x14\x03\x14" +
-    "\x03\x15\x03\x15\x03\x15\x03\x15\x03\x15\x05\x15\xEF\n\x15\x03\x16\x03" +
-    "\x16\x03\x16\x07\x16\xF4\n\x16\f\x16\x0E\x16\xF7\v\x16\x05\x16\xF9\n\x16" +
-    "\x03\x17\x03\x17\x03\x17\x03\x18\x03\x18\x07\x18\u0100\n\x18\f\x18\x0E" +
-    "\x18\u0103\v\x18\x03\x18\x05\x18\u0106\n\x18\x03\x18\x03\x18\x03\x19\x03" +
-    "\x19\x03\x1A\x03\x1A\x03\x1A\x03\x1A\x03\x1A\x05\x1A\u0111\n\x1A\x03\x1B" +
-    "\x03\x1B\x03\x1B\x03\x1B\x03\x1C\x03\x1C\x03\x1C\x07\x1C\u011A\n\x1C\f" +
-    "\x1C\x0E\x1C\u011D\v\x1C\x05\x1C\u011F\n\x1C\x03\x1D\x03\x1D\x03\x1E\x03" +
-    '\x1E\x03\x1F\x03\x1F\x03 \x03 \x03 \x03 \x05 \u012B\n \x03!\x03!\x03"' +
-    '\x03"\x03"\x03"\x03#\x03#\x03$\x03$\x07$\u0137\n$\f$\x0E$\u013A\v$' +
-    "\x03$\x03$\x03%\x03%\x03&\x03&\x03&\x05&\u0143\n&\x03'\x03'\x03(\x03" +
-    "(\x03(\x03(\x05(\u014B\n(\x03)\x03)\x03)\x03)\x05)\u0151\n)\x03*\x03*" +
-    "\x03+\x03+\x03+\x03+\x05+\u0159\n+\x03,\x03,\x03-\x03-\x03.\x03.\x05." +
-    "\u0161\n.\x03.\x02\x02\x03\x12/\x02\x02\x04\x02\x06\x02\b\x02\n\x02\f" +
-    "\x02\x0E\x02\x10\x02\x12\x02\x14\x02\x16\x02\x18\x02\x1A\x02\x1C\x02\x1E" +
-    '\x02 \x02"\x02$\x02&\x02(\x02*\x02,\x02.\x020\x022\x024\x026\x028\x02' +
-    ":\x02<\x02>\x02@\x02B\x02D\x02F\x02H\x02J\x02L\x02N\x02P\x02R\x02T\x02" +
-    'V\x02X\x02Z\x02\x02\b\x04\x02\x0E\x0E\x19"\x04\x02\x1A\x1A##\x04\x02' +
-    "\x0F\x0F$$\x03\x02&'\x03\x02()\x04\x02\x15\x15*-\x02\u0164\x02\\\x03" +
-    "\x02\x02\x02\x04g\x03\x02\x02\x02\x06q\x03\x02\x02\x02\bs\x03\x02\x02" +
-    "\x02\n{\x03\x02\x02\x02\f\x87\x03\x02\x02\x02\x0E\x89\x03\x02\x02\x02" +
-    "\x10\x90\x03\x02\x02\x02\x12\xA1\x03\x02\x02\x02\x14\xB2\x03\x02\x02\x02" +
-    "\x16\xB8\x03\x02\x02\x02\x18\xBE\x03\x02\x02\x02\x1A\xC4\x03\x02\x02\x02" +
-    "\x1C\xC8\x03\x02\x02\x02\x1E\xCD\x03\x02\x02\x02 \xD7\x03\x02\x02\x02" +
-    '"\xD9\x03\x02\x02\x02$\xDD\x03\x02\x02\x02&\xE7\x03\x02\x02\x02(\xEE' +
-    "\x03\x02\x02\x02*\xF8\x03\x02\x02\x02,\xFA\x03\x02\x02\x02.\xFD\x03\x02" +
-    "\x02\x020\u0109\x03\x02\x02\x022\u0110\x03\x02\x02\x024\u0112\x03\x02" +
-    "\x02\x026\u011E\x03\x02\x02\x028\u0120\x03\x02\x02\x02:\u0122\x03\x02" +
-    "\x02\x02<\u0124\x03\x02\x02\x02>\u012A\x03\x02\x02\x02@\u012C\x03\x02" +
-    "\x02\x02B\u012E\x03\x02\x02\x02D\u0132\x03\x02\x02\x02F\u0134\x03\x02" +
-    "\x02\x02H\u013D\x03\x02\x02\x02J\u0142\x03\x02\x02\x02L\u0144\x03\x02" +
-    "\x02\x02N\u014A\x03\x02\x02\x02P\u0150\x03\x02\x02\x02R\u0152\x03\x02" +
-    "\x02\x02T\u0158\x03\x02\x02\x02V\u015A\x03\x02\x02\x02X\u015C\x03\x02" +
-    "\x02\x02Z\u0160\x03\x02\x02\x02\\`\x05\x04\x03\x02]_\x05\x04\x03\x02^" +
-    "]\x03\x02\x02\x02_b\x03\x02\x02\x02`^\x03\x02\x02\x02`a\x03\x02\x02\x02" +
-    "ac\x03\x02\x02\x02b`\x03\x02\x02\x02cd\x07\x02\x02\x03d\x03\x03\x02\x02" +
-    "\x02eh\x05\b\x05\x02fh\x05\x0E\b\x02ge\x03\x02\x02\x02gf\x03\x02\x02\x02" +
-    "h\x05\x03\x02\x02\x02ir\x05\b\x05\x02jr\x05\n\x06\x02kl\x05\x10\t\x02" +
-    "lm\x07\x03\x02\x02mr\x03\x02\x02\x02no\x05\x12\n\x02op\x07\x03\x02\x02" +
-    "pr\x03\x02\x02\x02qi\x03\x02\x02\x02qj\x03\x02\x02\x02qk\x03\x02\x02\x02" +
-    "qn\x03\x02\x02\x02r\x07\x03\x02\x02\x02st\x07\x04\x02\x02tu\x05V,\x02" +
-    "uv\x07\x05\x02\x02vw\x05J&\x02wx\x07\x06\x02\x02xy\x05\x12\n\x02yz\x07" +
-    "\x03\x02\x02z\t\x03\x02\x02\x02{|\x07\x07\x02\x02|}\x05\f\x07\x02}\x80" +
-    "\x05X-\x02~\x7F\x07\x05\x02\x02\x7F\x81\x05J&\x02\x80~\x03\x02\x02\x02" +
-    "\x80\x81\x03\x02\x02\x02\x81\x82\x03\x02\x02\x02\x82\x83\x07\x06\x02\x02" +
-    "\x83\x84\x05\x12\n\x02\x84\x85\x07\x03\x02\x02\x85\v\x03\x02\x02\x02\x86" +
-    "\x88\x07\b\x02\x02\x87\x86\x03\x02\x02\x02\x87\x88\x03\x02\x02\x02\x88" +
-    "\r\x03\x02\x02\x02\x89\x8A\x07\t\x02\x02\x8A\x8B\x05Z.\x02\x8B\x8C\x05" +
-    "2\x1A\x02\x8C\x8D\x07\n\x02\x02\x8D\x8E\x05J&\x02\x8E\x8F\x050\x19\x02" +
-    "\x8F\x0F\x03\x02\x02\x02\x90\x91\x07\v\x02\x02\x91\x92\x05\x12\n\x02\x92" +
-    "\x11\x03\x02\x02\x02\x93\x94\b\n\x01\x02\x94\xA2\x05> \x02\x95\xA2\x05" +
-    "T+\x02\x96\xA2\x05\x14\v\x02\x97\xA2\x05\x1A\x0E\x02\x98\xA2\x05.\x18" +
-    "\x02\x99\xA2\x05\x1C\x0F\x02\x9A\xA2\x05\x1E\x10\x02\x9B\x9C\x05:\x1E" +
-    "\x02\x9C\x9D\x05\x12\n\x06\x9D\xA2\x03\x02\x02\x02\x9E\xA2\x05,\x17\x02" +
-    '\x9F\xA2\x05"\x12\x02\xA0\xA2\x05$\x13\x02\xA1\x93\x03\x02\x02\x02\xA1' +
-    "\x95\x03\x02\x02\x02\xA1\x96\x03\x02\x02\x02\xA1\x97\x03\x02\x02\x02\xA1" +
-    "\x98\x03\x02\x02\x02\xA1\x99\x03\x02\x02\x02\xA1\x9A\x03\x02\x02\x02\xA1" +
-    "\x9B\x03\x02\x02\x02\xA1\x9E\x03\x02\x02\x02\xA1\x9F\x03\x02\x02\x02\xA1" +
-    "\xA0\x03\x02\x02\x02\xA2\xAD\x03\x02\x02\x02\xA3\xA4\f\b\x02\x02\xA4\xA5" +
-    "\x058\x1D\x02\xA5\xA6\x05\x12\n\t\xA6\xAC\x03\x02\x02\x02\xA7\xA8\f\x07" +
-    "\x02\x02\xA8\xA9\x05<\x1F\x02\xA9\xAA\x05\x12\n\b\xAA\xAC\x03\x02\x02" +
-    "\x02\xAB\xA3\x03\x02\x02\x02\xAB\xA7\x03\x02\x02\x02\xAC\xAF\x03\x02\x02" +
-    "\x02\xAD\xAB\x03\x02\x02\x02\xAD\xAE\x03\x02\x02\x02\xAE\x13\x03\x02\x02" +
-    "\x02\xAF\xAD\x03\x02\x02\x02\xB0\xB3\x05\x16\f\x02\xB1\xB3\x05\x18\r\x02" +
-    "\xB2\xB0\x03\x02\x02\x02\xB2\xB1\x03\x02\x02\x02\xB3\x15\x03\x02\x02\x02" +
-    "\xB4\xB5\x07\f\x02\x02\xB5\xB9\x05T+\x02\xB6\xB7\x07\f\x02\x02\xB7\xB9" +
-    "\x05\x14\v\x02\xB8\xB4\x03\x02\x02\x02\xB8\xB6\x03\x02\x02\x02\xB9\x17" +
-    "\x03\x02\x02\x02\xBA\xBB\x07\r\x02\x02\xBB\xBF\x05T+\x02\xBC\xBD\x07\r" +
-    "\x02\x02\xBD\xBF\x05\x14\v\x02\xBE\xBA\x03\x02\x02\x02\xBE\xBC\x03\x02" +
-    "\x02\x02\xBF\x19\x03\x02\x02\x02\xC0\xC1\x07\x0E\x02\x02\xC1\xC5\x05T" +
-    "+\x02\xC2\xC3\x07\x0E\x02\x02\xC3\xC5\x05\x1A\x0E\x02\xC4\xC0\x03\x02" +
-    "\x02\x02\xC4\xC2\x03\x02\x02\x02\xC5\x1B\x03\x02\x02\x02\xC6\xC9\x05T" +
-    "+\x02\xC7\xC9\x05\x1A\x0E\x02\xC8\xC6\x03\x02\x02\x02\xC8\xC7\x03\x02" +
-    "\x02\x02\xC9\xCA\x03\x02\x02\x02\xCA\xCB\x07\x06\x02\x02\xCB\xCC\x05\x12" +
-    "\n\x02\xCC\x1D\x03\x02\x02\x02\xCD\xCE\x05 \x11\x02\xCE\xCF\x07\n\x02" +
-    "\x02\xCF\xD0\x05J&\x02\xD0\xD1\x050\x19\x02\xD1\x1F\x03\x02\x02\x02\xD2" +
-    "\xD8\x07\x0F\x02\x02\xD3\xD4\x07\x10\x02\x02\xD4\xD5\x056\x1C\x02\xD5" +
-    "\xD6\x07\x10\x02\x02\xD6\xD8\x03\x02\x02\x02\xD7\xD2\x03\x02\x02\x02\xD7" +
-    "\xD3\x03\x02\x02\x02\xD8!\x03\x02\x02\x02\xD9\xDA\x07\x11\x02\x02\xDA" +
-    "\xDB\x05\x12\n\x02\xDB\xDC\x07\x12\x02\x02\xDC#\x03\x02\x02\x02\xDD\xDE" +
-    "\x07\x13\x02\x02\xDE\xDF\x05&\x14\x02\xDF\xE5\x05.\x18\x02\xE0\xE3\x07" +
-    "\x14\x02\x02\xE1\xE4\x05.\x18\x02\xE2\xE4\x05$\x13\x02\xE3\xE1\x03\x02" +
-    "\x02\x02\xE3\xE2\x03\x02\x02\x02\xE4\xE6\x03\x02\x02\x02\xE5\xE0\x03\x02" +
-    "\x02\x02\xE5\xE6\x03\x02\x02\x02\xE6%\x03\x02\x02\x02\xE7\xE8\x05\x12" +
-    "\n\x02\xE8'\x03\x02\x02\x02\xE9\xEF\x07\x15\x02\x02\xEA\xEB\x07\x11\x02" +
-    "\x02\xEB\xEC\x05*\x16\x02\xEC\xED\x07\x12\x02\x02\xED\xEF\x03\x02\x02" +
-    "\x02\xEE\xE9\x03\x02\x02\x02\xEE\xEA\x03\x02\x02\x02\xEF)\x03\x02\x02" +
-    "\x02\xF0\xF5\x05\x12\n\x02\xF1\xF2\x07\x16\x02\x02\xF2\xF4\x05\x12\n\x02" +
-    "\xF3\xF1\x03\x02\x02\x02\xF4\xF7\x03\x02\x02\x02\xF5\xF3\x03\x02\x02\x02" +
-    "\xF5\xF6\x03\x02\x02\x02\xF6\xF9\x03\x02\x02\x02\xF7\xF5\x03\x02\x02\x02" +
-    "\xF8\xF0\x03\x02\x02\x02\xF8\xF9\x03\x02\x02\x02\xF9+\x03\x02\x02\x02" +
-    "\xFA\xFB\x05Z.\x02\xFB\xFC\x05(\x15\x02\xFC-\x03\x02\x02\x02\xFD\u0101" +
-    "\x07\x17\x02\x02\xFE\u0100\x05\x06\x04\x02\xFF\xFE\x03\x02\x02\x02\u0100" +
-    "\u0103\x03\x02\x02\x02\u0101\xFF\x03\x02\x02\x02\u0101\u0102\x03\x02\x02" +
-    "\x02\u0102\u0105\x03\x02\x02\x02\u0103\u0101\x03\x02\x02\x02\u0104\u0106" +
-    "\x05\x12\n\x02\u0105\u0104\x03\x02\x02\x02\u0105\u0106\x03\x02\x02\x02" +
-    "\u0106\u0107\x03\x02\x02\x02\u0107\u0108\x07\x18\x02\x02\u0108/\x03\x02" +
-    "\x02\x02\u0109\u010A\x05.\x18\x02\u010A1\x03\x02\x02\x02\u010B\u0111\x07" +
-    "\x15\x02\x02\u010C\u010D\x07\x11\x02\x02\u010D\u010E\x056\x1C\x02\u010E" +
-    "\u010F\x07\x12\x02\x02\u010F\u0111\x03\x02\x02\x02\u0110\u010B\x03\x02" +
-    "\x02\x02\u0110\u010C\x03\x02\x02\x02\u01113\x03\x02\x02\x02\u0112\u0113" +
-    "\x071\x02\x02\u0113\u0114\x07\x05\x02\x02\u0114\u0115\x05J&\x02\u0115" +
-    "5\x03\x02\x02\x02\u0116\u011B\x054\x1B\x02\u0117\u0118\x07\x16\x02\x02" +
-    "\u0118\u011A\x054\x1B\x02\u0119\u0117\x03\x02\x02\x02\u011A\u011D\x03" +
-    "\x02\x02\x02\u011B\u0119\x03\x02\x02\x02\u011B\u011C\x03\x02\x02\x02\u011C" +
-    "\u011F\x03\x02\x02\x02\u011D\u011B\x03\x02\x02\x02\u011E\u0116\x03\x02" +
-    "\x02\x02\u011E\u011F\x03\x02\x02\x02\u011F7\x03\x02\x02\x02\u0120\u0121" +
-    "\t\x02\x02\x02\u01219\x03\x02\x02\x02\u0122\u0123\t\x03\x02\x02\u0123" +
-    ";\x03\x02\x02\x02\u0124\u0125\t\x04\x02\x02\u0125=\x03\x02\x02\x02\u0126" +
-    '\u012B\x05@!\x02\u0127\u012B\x05B"\x02\u0128\u012B\x05D#\x02\u0129\u012B' +
-    "\x05F$\x02\u012A\u0126\x03\x02\x02\x02\u012A\u0127\x03\x02\x02\x02\u012A" +
-    "\u0128\x03\x02\x02\x02\u012A\u0129\x03\x02\x02\x02\u012B?\x03\x02\x02" +
-    "\x02\u012C\u012D\x070\x02\x02\u012DA\x03\x02\x02\x02\u012E\u012F\x070" +
-    "\x02\x02\u012F\u0130\x07%\x02\x02\u0130\u0131\x070\x02\x02\u0131C\x03" +
-    "\x02\x02\x02\u0132\u0133\t\x05\x02\x02\u0133E\x03\x02\x02\x02\u0134\u0138" +
-    "\x07(\x02\x02\u0135\u0137\x05H%\x02\u0136\u0135\x03\x02\x02\x02\u0137" +
-    "\u013A\x03\x02\x02\x02\u0138\u0136\x03\x02\x02\x02\u0138\u0139\x03\x02" +
-    "\x02\x02\u0139\u013B\x03\x02\x02\x02\u013A\u0138\x03\x02\x02\x02\u013B" +
-    "\u013C\x07(\x02\x02\u013CG\x03\x02\x02\x02\u013D\u013E\n\x06\x02\x02\u013E" +
-    "I\x03\x02\x02\x02\u013F\u0143\x05L'\x02\u0140\u0143\x05N(\x02\u0141\u0143" +
-    "\x05P)\x02\u0142\u013F\x03\x02\x02\x02\u0142\u0140\x03\x02\x02\x02\u0142" +
-    "\u0141\x03\x02\x02\x02\u0143K\x03\x02\x02\x02\u0144\u0145\t\x07\x02\x02" +
-    "\u0145M\x03\x02\x02\x02\u0146\u0147\x07\f\x02\x02\u0147\u014B\x05L'\x02" +
-    "\u0148\u0149\x07\f\x02\x02\u0149\u014B\x05J&\x02\u014A\u0146\x03\x02\x02" +
-    "\x02\u014A\u0148\x03\x02\x02\x02\u014BO\x03\x02\x02\x02\u014C\u014D\x07" +
-    "\r\x02\x02\u014D\u0151\x05L'\x02\u014E\u014F\x07\r\x02\x02\u014F\u0151" +
-    "\x05J&\x02\u0150\u014C\x03\x02\x02\x02\u0150\u014E\x03\x02\x02\x02\u0151" +
-    "Q\x03\x02\x02\x02\u0152\u0153\x07.\x02\x02\u0153S\x03\x02\x02\x02\u0154" +
-    "\u0159\x05V,\x02\u0155\u0159\x05X-\x02\u0156\u0159\x05Z.\x02\u0157\u0159" +
-    "\x05R*\x02\u0158\u0154\x03\x02\x02\x02\u0158\u0155\x03\x02\x02\x02\u0158" +
-    "\u0156\x03\x02\x02\x02\u0158\u0157\x03\x02\x02\x02\u0159U\x03\x02\x02" +
-    "\x02\u015A\u015B\x071\x02\x02\u015BW\x03\x02\x02\x02\u015C\u015D\x071" +
-    "\x02\x02\u015DY\x03\x02\x02\x02\u015E\u0161\x071\x02\x02\u015F\u0161\x05" +
-    "R*\x02\u0160\u015E\x03\x02\x02\x02\u0160\u015F\x03\x02\x02\x02\u0161[" +
-    "\x03\x02\x02\x02!`gq\x80\x87\xA1\xAB\xAD\xB2\xB8\xBE\xC4\xC8\xD7\xE3\xE5" +
-    "\xEE\xF5\xF8\u0101\u0105\u0110\u011B\u011E\u012A\u0138\u0142\u014A\u0150" +
-    "\u0158\u0160";
+    "\x04,\t,\x04-\t-\x04.\t.\x04/\t/\x040\t0\x041\t1\x042\t2\x043\t3\x03\x02" +
+    "\x03\x02\x07\x02i\n\x02\f\x02\x0E\x02l\v\x02\x03\x02\x03\x02\x03\x03\x03" +
+    "\x03\x05\x03r\n\x03\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03" +
+    "\x04\x03\x04\x05\x04|\n\x04\x03\x05\x03\x05\x03\x05\x03\x05\x03\x05\x03" +
+    "\x05\x03\x05\x03\x05\x03\x06\x03\x06\x03\x06\x03\x06\x03\x06\x05\x06\x8B" +
+    "\n\x06\x03\x06\x03\x06\x03\x06\x03\x06\x03\x07\x05\x07\x92\n\x07\x03\b" +
+    "\x03\b\x03\b\x03\b\x03\b\x03\b\x03\b\x03\t\x03\t\x03\t\x03\n\x03\n\x03" +
+    "\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03" +
+    "\n\x03\n\x03\n\x05\n\xAF\n\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n\x03\n" +
+    "\x03\n\x07\n\xB9\n\n\f\n\x0E\n\xBC\v\n\x03\v\x03\v\x03\f\x03\f\x05\f\xC2" +
+    "\n\f\x03\r\x03\r\x03\r\x03\x0E\x03\x0E\x03\x0E\x03\x0E\x03\x0F\x03\x0F" +
+    "\x05\x0F\xCD\n\x0F\x03\x10\x03\x10\x03\x10\x03\x10\x05\x10\xD3\n\x10\x03" +
+    "\x11\x03\x11\x03\x11\x03\x11\x05\x11\xD9\n\x11\x03\x12\x03\x12\x03\x12" +
+    "\x03\x12\x05\x12\xDF\n\x12\x03\x13\x03\x13\x05\x13\xE3\n\x13\x03\x13\x03" +
+    "\x13\x03\x13\x03\x14\x03\x14\x03\x14\x03\x14\x03\x14\x03\x15\x03\x15\x03" +
+    "\x15\x03\x15\x03\x15\x05\x15\xF2\n\x15\x03\x16\x03\x16\x03\x16\x03\x17" +
+    "\x03\x17\x03\x17\x03\x17\x03\x18\x03\x18\x03\x18\x03\x18\x03\x18\x03\x18" +
+    "\x05\x18\u0101\n\x18\x05\x18\u0103\n\x18\x03\x19\x03\x19\x03\x1A\x03\x1A" +
+    "\x03\x1A\x03\x1A\x03\x1A\x05\x1A\u010C\n\x1A\x03\x1B\x03\x1B\x03\x1B\x07" +
+    "\x1B\u0111\n\x1B\f\x1B\x0E\x1B\u0114\v\x1B\x05\x1B\u0116\n\x1B\x03\x1C" +
+    "\x03\x1C\x03\x1C\x03\x1D\x03\x1D\x07\x1D\u011D\n\x1D\f\x1D\x0E\x1D\u0120" +
+    "\v\x1D\x03\x1D\x05\x1D\u0123\n\x1D\x03\x1D\x03\x1D\x03\x1E\x03\x1E\x03" +
+    "\x1F\x03\x1F\x03\x1F\x03\x1F\x03\x1F\x05\x1F\u012E\n\x1F\x03 \x03 \x03" +
+    " \x03 \x03!\x03!\x03!\x07!\u0137\n!\f!\x0E!\u013A\v!\x05!\u013C\n!\x03" +
+    '"\x03"\x03#\x03#\x03$\x03$\x03%\x03%\x03%\x03%\x05%\u0148\n%\x03&\x03' +
+    "&\x03'\x03'\x03'\x03'\x03(\x03(\x03)\x03)\x03*\x03*\x03*\x05*\u0157" +
+    "\n*\x03+\x03+\x03+\x03+\x03+\x03+\x05+\u015F\n+\x03,\x03,\x03,\x03,\x03" +
+    "-\x03-\x03-\x03-\x05-\u0169\n-\x03.\x03.\x03.\x03.\x05.\u016F\n.\x03/" +
+    "\x03/\x030\x030\x030\x030\x050\u0177\n0\x031\x031\x032\x032\x033\x033" +
+    "\x053\u017F\n3\x033\x02\x02\x03\x124\x02\x02\x04\x02\x06\x02\b\x02\n\x02" +
+    "\f\x02\x0E\x02\x10\x02\x12\x02\x14\x02\x16\x02\x18\x02\x1A\x02\x1C\x02" +
+    '\x1E\x02 \x02"\x02$\x02&\x02(\x02*\x02,\x02.\x020\x022\x024\x026\x02' +
+    "8\x02:\x02<\x02>\x02@\x02B\x02D\x02F\x02H\x02J\x02L\x02N\x02P\x02R\x02" +
+    "T\x02V\x02X\x02Z\x02\\\x02^\x02`\x02b\x02d\x02\x02\x06\x04\x02\x11\x11" +
+    "\x1C%\x04\x02\x1D\x1D&&\x04\x02\x12\x12''\x03\x02)*\x02\u0185\x02f\x03" +
+    "\x02\x02\x02\x04q\x03\x02\x02\x02\x06{\x03\x02\x02\x02\b}\x03\x02\x02" +
+    "\x02\n\x85\x03\x02\x02\x02\f\x91\x03\x02\x02\x02\x0E\x93\x03\x02\x02\x02" +
+    "\x10\x9A\x03\x02\x02\x02\x12\xAE\x03\x02\x02\x02\x14\xBD\x03\x02\x02\x02" +
+    "\x16\xC1\x03\x02\x02\x02\x18\xC3\x03\x02\x02\x02\x1A\xC6\x03\x02\x02\x02" +
+    "\x1C\xCC\x03\x02\x02\x02\x1E\xD2\x03\x02\x02\x02 \xD8\x03\x02\x02\x02" +
+    '"\xDE\x03\x02\x02\x02$\xE2\x03\x02\x02\x02&\xE7\x03\x02\x02\x02(\xF1' +
+    "\x03\x02\x02\x02*\xF3\x03\x02\x02\x02,\xF6\x03\x02\x02\x02.\xFA\x03\x02" +
+    "\x02\x020\u0104\x03\x02\x02\x022\u010B\x03\x02\x02\x024\u0115\x03\x02" +
+    "\x02\x026\u0117\x03\x02\x02\x028\u011A\x03\x02\x02\x02:\u0126\x03\x02" +
+    "\x02\x02<\u012D\x03\x02\x02\x02>\u012F\x03\x02\x02\x02@\u013B\x03\x02" +
+    "\x02\x02B\u013D\x03\x02\x02\x02D\u013F\x03\x02\x02\x02F\u0141\x03\x02" +
+    "\x02\x02H\u0147\x03\x02\x02\x02J\u0149\x03\x02\x02\x02L\u014B\x03\x02" +
+    "\x02\x02N\u014F\x03\x02\x02\x02P\u0151\x03\x02\x02\x02R\u0156\x03\x02" +
+    "\x02\x02T\u015E\x03\x02\x02\x02V\u0160\x03\x02\x02\x02X\u0168\x03\x02" +
+    "\x02\x02Z\u016E\x03\x02\x02\x02\\\u0170\x03\x02\x02\x02^\u0176\x03\x02" +
+    "\x02\x02`\u0178\x03\x02\x02\x02b\u017A\x03\x02\x02\x02d\u017E\x03\x02" +
+    "\x02\x02fj\x05\x04\x03\x02gi\x05\x04\x03\x02hg\x03\x02\x02\x02il\x03\x02" +
+    "\x02\x02jh\x03\x02\x02\x02jk\x03\x02\x02\x02km\x03\x02\x02\x02lj\x03\x02" +
+    "\x02\x02mn\x07\x02\x02\x03n\x03\x03\x02\x02\x02or\x05\b\x05\x02pr\x05" +
+    "\x0E\b\x02qo\x03\x02\x02\x02qp\x03\x02\x02\x02r\x05\x03\x02\x02\x02s|" +
+    "\x05\b\x05\x02t|\x05\n\x06\x02uv\x05\x10\t\x02vw\x07\x03\x02\x02w|\x03" +
+    "\x02\x02\x02xy\x05\x12\n\x02yz\x07\x03\x02\x02z|\x03\x02\x02\x02{s\x03" +
+    "\x02\x02\x02{t\x03\x02\x02\x02{u\x03\x02\x02\x02{x\x03\x02\x02\x02|\x07" +
+    "\x03\x02\x02\x02}~\x07\x04\x02\x02~\x7F\x05`1\x02\x7F\x80\x07\x05\x02" +
+    "\x02\x80\x81\x05R*\x02\x81\x82\x07\x06\x02\x02\x82\x83\x05\x12\n\x02\x83" +
+    "\x84\x07\x03\x02\x02\x84\t\x03\x02\x02\x02\x85\x86\x07\x07\x02\x02\x86" +
+    "\x87\x05\f\x07\x02\x87\x8A\x05b2\x02\x88\x89\x07\x05\x02\x02\x89\x8B\x05" +
+    "R*\x02\x8A\x88\x03\x02\x02\x02\x8A\x8B\x03\x02\x02\x02\x8B\x8C\x03\x02" +
+    "\x02\x02\x8C\x8D\x07\x06\x02\x02\x8D\x8E\x05\x12\n\x02\x8E\x8F\x07\x03" +
+    "\x02\x02\x8F\v\x03\x02\x02\x02\x90\x92\x07\b\x02\x02\x91\x90\x03\x02\x02" +
+    "\x02\x91\x92\x03\x02\x02\x02\x92\r\x03\x02\x02\x02\x93\x94\x07\t\x02\x02" +
+    "\x94\x95\x05d3\x02\x95\x96\x05<\x1F\x02\x96\x97\x07\n\x02\x02\x97\x98" +
+    "\x05R*\x02\x98\x99\x05:\x1E\x02\x99\x0F\x03\x02\x02\x02\x9A\x9B\x07\v" +
+    "\x02\x02\x9B\x9C\x05\x12\n\x02\x9C\x11\x03\x02\x02\x02\x9D\x9E\b\n\x01" +
+    "\x02\x9E\xAF\x05H%\x02\x9F\xAF\x05^0\x02\xA0\xAF\x05\x1C\x0F\x02\xA1\xAF" +
+    '\x05"\x12\x02\xA2\xAF\x058\x1D\x02\xA3\xAF\x05$\x13\x02\xA4\xAF\x05&' +
+    "\x14\x02\xA5\xA6\x05D#\x02\xA6\xA7\x05\x12\n\t\xA7\xAF\x03\x02\x02\x02" +
+    "\xA8\xAF\x056\x1C\x02\xA9\xAF\x05*\x16\x02\xAA\xAF\x05,\x17\x02\xAB\xAF" +
+    "\x05\x14\v\x02\xAC\xAF\x05.\x18\x02\xAD\xAF\x05\x16\f\x02\xAE\x9D\x03" +
+    "\x02\x02\x02\xAE\x9F\x03\x02\x02\x02\xAE\xA0\x03\x02\x02\x02\xAE\xA1\x03" +
+    "\x02\x02\x02\xAE\xA2\x03\x02\x02\x02\xAE\xA3\x03\x02\x02\x02\xAE\xA4\x03" +
+    "\x02\x02\x02\xAE\xA5\x03\x02\x02\x02\xAE\xA8\x03\x02\x02\x02\xAE\xA9\x03" +
+    "\x02\x02\x02\xAE\xAA\x03\x02\x02\x02\xAE\xAB\x03\x02\x02\x02\xAE\xAC\x03" +
+    "\x02\x02\x02\xAE\xAD\x03\x02\x02\x02\xAF\xBA\x03\x02\x02\x02\xB0\xB1\f" +
+    '\v\x02\x02\xB1\xB2\x05B"\x02\xB2\xB3\x05\x12\n\f\xB3\xB9\x03\x02\x02' +
+    "\x02\xB4\xB5\f\n\x02\x02\xB5\xB6\x05F$\x02\xB6\xB7\x05\x12\n\v\xB7\xB9" +
+    "\x03\x02\x02\x02\xB8\xB0\x03\x02\x02\x02\xB8\xB4\x03\x02\x02\x02\xB9\xBC" +
+    "\x03\x02\x02\x02\xBA\xB8\x03\x02\x02\x02\xBA\xBB\x03\x02\x02\x02\xBB\x13" +
+    "\x03\x02\x02\x02\xBC\xBA\x03\x02\x02\x02\xBD\xBE\x07\f\x02\x02\xBE\x15" +
+    "\x03\x02\x02\x02\xBF\xC2\x05\x18\r\x02\xC0\xC2\x05\x1A\x0E\x02\xC1\xBF" +
+    "\x03\x02\x02\x02\xC1\xC0\x03\x02\x02\x02\xC2\x17\x03\x02\x02\x02\xC3\xC4" +
+    "\x07\r\x02\x02\xC4\xC5\x058\x1D\x02\xC5\x19\x03\x02\x02\x02\xC6\xC7\x07" +
+    "\x0E\x02\x02\xC7\xC8\x050\x19\x02\xC8\xC9\x058\x1D\x02\xC9\x1B\x03\x02" +
+    "\x02\x02\xCA\xCD\x05\x1E\x10\x02\xCB\xCD\x05 \x11\x02\xCC\xCA\x03\x02" +
+    "\x02\x02\xCC\xCB\x03\x02\x02\x02\xCD\x1D\x03\x02\x02\x02\xCE\xCF\x07\x0F" +
+    "\x02\x02\xCF\xD3\x05^0\x02\xD0\xD1\x07\x0F\x02\x02\xD1\xD3\x05\x1C\x0F" +
+    "\x02\xD2\xCE\x03\x02\x02\x02\xD2\xD0\x03\x02\x02\x02\xD3\x1F\x03\x02\x02" +
+    "\x02\xD4\xD5\x07\x10\x02\x02\xD5\xD9\x05^0\x02\xD6\xD7\x07\x10\x02\x02" +
+    "\xD7\xD9\x05\x1C\x0F\x02\xD8\xD4\x03\x02\x02\x02\xD8\xD6\x03\x02\x02\x02" +
+    "\xD9!\x03\x02\x02\x02\xDA\xDB\x07\x11\x02\x02\xDB\xDF\x05^0\x02\xDC\xDD" +
+    '\x07\x11\x02\x02\xDD\xDF\x05"\x12\x02\xDE\xDA\x03\x02\x02\x02\xDE\xDC' +
+    '\x03\x02\x02\x02\xDF#\x03\x02\x02\x02\xE0\xE3\x05^0\x02\xE1\xE3\x05"' +
+    "\x12\x02\xE2\xE0\x03\x02\x02\x02\xE2\xE1\x03\x02\x02\x02\xE3\xE4\x03\x02" +
+    "\x02\x02\xE4\xE5\x07\x06\x02\x02\xE5\xE6\x05\x12\n\x02\xE6%\x03\x02\x02" +
+    "\x02\xE7\xE8\x05(\x15\x02\xE8\xE9\x07\n\x02\x02\xE9\xEA\x05R*\x02\xEA" +
+    "\xEB\x05:\x1E\x02\xEB'\x03\x02\x02\x02\xEC\xF2\x07\x12\x02\x02\xED\xEE" +
+    "\x07\x13\x02\x02\xEE\xEF\x05@!\x02\xEF\xF0\x07\x13\x02\x02\xF0\xF2\x03" +
+    "\x02\x02\x02\xF1\xEC\x03\x02\x02\x02\xF1\xED\x03\x02\x02\x02\xF2)\x03" +
+    "\x02\x02\x02\xF3\xF4\x05&\x14\x02\xF4\xF5\x052\x1A\x02\xF5+\x03\x02\x02" +
+    "\x02\xF6\xF7\x07\x14\x02\x02\xF7\xF8\x05\x12\n\x02\xF8\xF9\x07\x15\x02" +
+    "\x02\xF9-\x03\x02\x02\x02\xFA\xFB\x07\x16\x02\x02\xFB\xFC\x050\x19\x02" +
+    "\xFC\u0102\x058\x1D\x02\xFD\u0100\x07\x17\x02\x02\xFE\u0101\x058\x1D\x02" +
+    "\xFF\u0101\x05.\x18\x02\u0100\xFE\x03\x02\x02\x02\u0100\xFF\x03\x02\x02" +
+    "\x02\u0101\u0103\x03\x02\x02\x02\u0102\xFD\x03\x02\x02\x02\u0102\u0103" +
+    "\x03\x02\x02\x02\u0103/\x03\x02\x02\x02\u0104\u0105\x05\x12\n\x02\u0105" +
+    "1\x03\x02\x02\x02\u0106\u010C\x07\x18\x02\x02\u0107\u0108\x07\x14\x02" +
+    "\x02\u0108\u0109\x054\x1B\x02\u0109\u010A\x07\x15\x02\x02\u010A\u010C" +
+    "\x03\x02\x02\x02\u010B\u0106\x03\x02\x02\x02\u010B\u0107\x03\x02\x02\x02" +
+    "\u010C3\x03\x02\x02\x02\u010D\u0112\x05\x12\n\x02\u010E\u010F\x07\x19" +
+    "\x02\x02\u010F\u0111\x05\x12\n\x02\u0110\u010E\x03\x02\x02\x02\u0111\u0114" +
+    "\x03\x02\x02\x02\u0112\u0110\x03\x02\x02\x02\u0112\u0113\x03\x02\x02\x02" +
+    "\u0113\u0116\x03\x02\x02\x02\u0114\u0112\x03\x02\x02\x02\u0115\u010D\x03" +
+    "\x02\x02\x02\u0115\u0116\x03\x02\x02\x02\u01165\x03\x02\x02\x02\u0117" +
+    "\u0118\x05d3\x02\u0118\u0119\x052\x1A\x02\u01197\x03\x02\x02\x02\u011A" +
+    "\u011E\x07\x1A\x02\x02\u011B\u011D\x05\x06\x04\x02\u011C\u011B\x03\x02" +
+    "\x02\x02\u011D\u0120\x03\x02\x02\x02\u011E\u011C\x03\x02\x02\x02\u011E" +
+    "\u011F\x03\x02\x02\x02\u011F\u0122\x03\x02\x02\x02\u0120\u011E\x03\x02" +
+    "\x02\x02\u0121\u0123\x05\x12\n\x02\u0122\u0121\x03\x02\x02\x02\u0122\u0123" +
+    "\x03\x02\x02\x02\u0123\u0124\x03\x02\x02\x02\u0124\u0125\x07\x1B\x02\x02" +
+    "\u01259\x03\x02\x02\x02\u0126\u0127\x058\x1D\x02\u0127;\x03\x02\x02\x02" +
+    "\u0128\u012E\x07\x18\x02\x02\u0129\u012A\x07\x14\x02\x02\u012A\u012B\x05" +
+    "@!\x02\u012B\u012C\x07\x15\x02\x02\u012C\u012E\x03\x02\x02\x02\u012D\u0128" +
+    "\x03\x02\x02\x02\u012D\u0129\x03\x02\x02\x02\u012E=\x03\x02\x02\x02\u012F" +
+    "\u0130\x074\x02\x02\u0130\u0131\x07\x05\x02\x02\u0131\u0132\x05R*\x02" +
+    "\u0132?\x03\x02\x02\x02\u0133\u0138\x05> \x02\u0134\u0135\x07\x19\x02" +
+    "\x02\u0135\u0137\x05> \x02\u0136\u0134\x03\x02\x02\x02\u0137\u013A\x03" +
+    "\x02\x02\x02\u0138\u0136\x03\x02\x02\x02\u0138\u0139\x03\x02\x02\x02\u0139" +
+    "\u013C\x03\x02\x02\x02\u013A\u0138\x03\x02\x02\x02\u013B\u0133\x03\x02" +
+    "\x02\x02\u013B\u013C\x03\x02\x02\x02\u013CA\x03\x02\x02\x02\u013D\u013E" +
+    "\t\x02\x02\x02\u013EC\x03\x02\x02\x02\u013F\u0140\t\x03\x02\x02\u0140" +
+    "E\x03\x02\x02\x02\u0141\u0142\t\x04\x02\x02\u0142G\x03\x02\x02\x02\u0143" +
+    "\u0148\x05J&\x02\u0144\u0148\x05L'\x02\u0145\u0148\x05N(\x02\u0146\u0148" +
+    "\x05P)\x02\u0147\u0143\x03\x02\x02\x02\u0147\u0144\x03\x02\x02\x02\u0147" +
+    "\u0145\x03\x02\x02\x02\u0147\u0146\x03\x02\x02\x02\u0148I\x03\x02\x02" +
+    "\x02\u0149\u014A\x073\x02\x02\u014AK\x03\x02\x02\x02\u014B\u014C\x073" +
+    "\x02\x02\u014C\u014D\x07(\x02\x02\u014D\u014E\x073\x02\x02\u014EM\x03" +
+    "\x02\x02\x02\u014F\u0150\t\x05\x02\x02\u0150O\x03\x02\x02\x02\u0151\u0152" +
+    "\x071\x02\x02\u0152Q\x03\x02\x02\x02\u0153\u0157\x05T+\x02\u0154\u0157" +
+    "\x05X-\x02\u0155\u0157\x05Z.\x02\u0156\u0153\x03\x02\x02\x02\u0156\u0154" +
+    "\x03\x02\x02\x02\u0156\u0155\x03\x02\x02\x02\u0157S\x03\x02\x02\x02\u0158" +
+    "\u015F\x07+\x02\x02\u0159\u015F\x07,\x02\x02\u015A\u015F\x07-\x02\x02" +
+    "\u015B\u015F\x07.\x02\x02\u015C\u015F\x07\x18\x02\x02\u015D\u015F\x05" +
+    "V,\x02\u015E\u0158\x03\x02\x02\x02\u015E\u0159\x03\x02\x02\x02\u015E\u015A" +
+    "\x03\x02\x02\x02\u015E\u015B\x03\x02\x02\x02\u015E\u015C\x03\x02\x02\x02" +
+    "\u015E\u015D\x03\x02\x02\x02\u015FU\x03\x02\x02\x02\u0160\u0161\x07/\x02" +
+    "\x02\u0161\u0162\x05R*\x02\u0162\u0163\x07#\x02\x02\u0163W\x03\x02\x02" +
+    "\x02\u0164\u0165\x07\x0F\x02\x02\u0165\u0169\x05T+\x02\u0166\u0167\x07" +
+    "\x0F\x02\x02\u0167\u0169\x05R*\x02\u0168\u0164\x03\x02\x02\x02\u0168\u0166" +
+    "\x03\x02\x02\x02\u0169Y\x03\x02\x02\x02\u016A\u016B\x07\x10\x02\x02\u016B" +
+    "\u016F\x05T+\x02\u016C\u016D\x07\x10\x02\x02\u016D\u016F\x05R*\x02\u016E" +
+    "\u016A\x03\x02\x02\x02\u016E\u016C\x03\x02\x02\x02\u016F[\x03\x02\x02" +
+    "\x02\u0170\u0171\x070\x02\x02\u0171]\x03\x02\x02\x02\u0172\u0177\x05`" +
+    "1\x02\u0173\u0177\x05b2\x02\u0174\u0177\x05d3\x02\u0175\u0177\x05\\/\x02" +
+    "\u0176\u0172\x03\x02\x02\x02\u0176\u0173\x03\x02\x02\x02\u0176\u0174\x03" +
+    "\x02\x02\x02\u0176\u0175\x03\x02\x02\x02\u0177_\x03\x02\x02\x02\u0178" +
+    "\u0179\x074\x02\x02\u0179a\x03\x02\x02\x02\u017A\u017B\x074\x02\x02\u017B" +
+    "c\x03\x02\x02\x02\u017C\u017F\x074\x02\x02\u017D\u017F\x05\\/\x02\u017E" +
+    "\u017C\x03\x02\x02\x02\u017E\u017D\x03\x02\x02\x02\u017Fe\x03\x02\x02" +
+    '\x02"jq{\x8A\x91\xAE\xB8\xBA\xC1\xCC\xD2\xD8\xDE\xE2\xF1\u0100\u0102' +
+    "\u010B\u0112\u0115\u011E\u0122\u012D\u0138\u013B\u0147\u0156\u015E\u0168" +
+    "\u016E\u0176\u017E";
   public static __ATN: ATN;
   public static get _ATN(): ATN {
     if (!Rust2Parser.__ATN) {
@@ -2901,11 +3065,22 @@ export class ExpressionContext extends ParserRuleContext {
   public function_application(): Function_applicationContext | undefined {
     return this.tryGetRuleContext(0, Function_applicationContext);
   }
+  public immediate_closure_application():
+    | Immediate_closure_applicationContext
+    | undefined {
+    return this.tryGetRuleContext(0, Immediate_closure_applicationContext);
+  }
   public parens_expression(): Parens_expressionContext | undefined {
     return this.tryGetRuleContext(0, Parens_expressionContext);
   }
+  public break_keyword(): Break_keywordContext | undefined {
+    return this.tryGetRuleContext(0, Break_keywordContext);
+  }
   public if_expression(): If_expressionContext | undefined {
     return this.tryGetRuleContext(0, If_expressionContext);
+  }
+  public loop_expression(): Loop_expressionContext | undefined {
+    return this.tryGetRuleContext(0, Loop_expressionContext);
   }
   constructor(parent: ParserRuleContext | undefined, invokingState: number) {
     super(parent, invokingState);
@@ -2930,6 +3105,141 @@ export class ExpressionContext extends ParserRuleContext {
   public accept<Result>(visitor: Rust2Visitor<Result>): Result {
     if (visitor.visitExpression) {
       return visitor.visitExpression(this);
+    } else {
+      return visitor.visitChildren(this);
+    }
+  }
+}
+
+export class Break_keywordContext extends ParserRuleContext {
+  constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+    super(parent, invokingState);
+  }
+  // @Override
+  public get ruleIndex(): number {
+    return Rust2Parser.RULE_break_keyword;
+  }
+  // @Override
+  public enterRule(listener: Rust2Listener): void {
+    if (listener.enterBreak_keyword) {
+      listener.enterBreak_keyword(this);
+    }
+  }
+  // @Override
+  public exitRule(listener: Rust2Listener): void {
+    if (listener.exitBreak_keyword) {
+      listener.exitBreak_keyword(this);
+    }
+  }
+  // @Override
+  public accept<Result>(visitor: Rust2Visitor<Result>): Result {
+    if (visitor.visitBreak_keyword) {
+      return visitor.visitBreak_keyword(this);
+    } else {
+      return visitor.visitChildren(this);
+    }
+  }
+}
+
+export class Loop_expressionContext extends ParserRuleContext {
+  public infinite_loop(): Infinite_loopContext | undefined {
+    return this.tryGetRuleContext(0, Infinite_loopContext);
+  }
+  public while_loop(): While_loopContext | undefined {
+    return this.tryGetRuleContext(0, While_loopContext);
+  }
+  constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+    super(parent, invokingState);
+  }
+  // @Override
+  public get ruleIndex(): number {
+    return Rust2Parser.RULE_loop_expression;
+  }
+  // @Override
+  public enterRule(listener: Rust2Listener): void {
+    if (listener.enterLoop_expression) {
+      listener.enterLoop_expression(this);
+    }
+  }
+  // @Override
+  public exitRule(listener: Rust2Listener): void {
+    if (listener.exitLoop_expression) {
+      listener.exitLoop_expression(this);
+    }
+  }
+  // @Override
+  public accept<Result>(visitor: Rust2Visitor<Result>): Result {
+    if (visitor.visitLoop_expression) {
+      return visitor.visitLoop_expression(this);
+    } else {
+      return visitor.visitChildren(this);
+    }
+  }
+}
+
+export class Infinite_loopContext extends ParserRuleContext {
+  public block(): BlockContext {
+    return this.getRuleContext(0, BlockContext);
+  }
+  constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+    super(parent, invokingState);
+  }
+  // @Override
+  public get ruleIndex(): number {
+    return Rust2Parser.RULE_infinite_loop;
+  }
+  // @Override
+  public enterRule(listener: Rust2Listener): void {
+    if (listener.enterInfinite_loop) {
+      listener.enterInfinite_loop(this);
+    }
+  }
+  // @Override
+  public exitRule(listener: Rust2Listener): void {
+    if (listener.exitInfinite_loop) {
+      listener.exitInfinite_loop(this);
+    }
+  }
+  // @Override
+  public accept<Result>(visitor: Rust2Visitor<Result>): Result {
+    if (visitor.visitInfinite_loop) {
+      return visitor.visitInfinite_loop(this);
+    } else {
+      return visitor.visitChildren(this);
+    }
+  }
+}
+
+export class While_loopContext extends ParserRuleContext {
+  public cond_expr(): Cond_exprContext {
+    return this.getRuleContext(0, Cond_exprContext);
+  }
+  public block(): BlockContext {
+    return this.getRuleContext(0, BlockContext);
+  }
+  constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+    super(parent, invokingState);
+  }
+  // @Override
+  public get ruleIndex(): number {
+    return Rust2Parser.RULE_while_loop;
+  }
+  // @Override
+  public enterRule(listener: Rust2Listener): void {
+    if (listener.enterWhile_loop) {
+      listener.enterWhile_loop(this);
+    }
+  }
+  // @Override
+  public exitRule(listener: Rust2Listener): void {
+    if (listener.exitWhile_loop) {
+      listener.exitWhile_loop(this);
+    }
+  }
+  // @Override
+  public accept<Result>(visitor: Rust2Visitor<Result>): Result {
+    if (visitor.visitWhile_loop) {
+      return visitor.visitWhile_loop(this);
     } else {
       return visitor.visitChildren(this);
     }
@@ -3185,6 +3495,42 @@ export class Closure_parameter_listContext extends ParserRuleContext {
   public accept<Result>(visitor: Rust2Visitor<Result>): Result {
     if (visitor.visitClosure_parameter_list) {
       return visitor.visitClosure_parameter_list(this);
+    } else {
+      return visitor.visitChildren(this);
+    }
+  }
+}
+
+export class Immediate_closure_applicationContext extends ParserRuleContext {
+  public closure(): ClosureContext {
+    return this.getRuleContext(0, ClosureContext);
+  }
+  public args_list(): Args_listContext {
+    return this.getRuleContext(0, Args_listContext);
+  }
+  constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+    super(parent, invokingState);
+  }
+  // @Override
+  public get ruleIndex(): number {
+    return Rust2Parser.RULE_immediate_closure_application;
+  }
+  // @Override
+  public enterRule(listener: Rust2Listener): void {
+    if (listener.enterImmediate_closure_application) {
+      listener.enterImmediate_closure_application(this);
+    }
+  }
+  // @Override
+  public exitRule(listener: Rust2Listener): void {
+    if (listener.exitImmediate_closure_application) {
+      listener.exitImmediate_closure_application(this);
+    }
+  }
+  // @Override
+  public accept<Result>(visitor: Rust2Visitor<Result>): Result {
+    if (visitor.visitImmediate_closure_application) {
+      return visitor.visitImmediate_closure_application(this);
     } else {
       return visitor.visitChildren(this);
     }
@@ -3828,16 +4174,8 @@ export class Boolean_literalContext extends ParserRuleContext {
 }
 
 export class String_literalContext extends ParserRuleContext {
-  public string_characters(): String_charactersContext[];
-  public string_characters(i: number): String_charactersContext;
-  public string_characters(
-    i?: number,
-  ): String_charactersContext | String_charactersContext[] {
-    if (i === undefined) {
-      return this.getRuleContexts(String_charactersContext);
-    } else {
-      return this.getRuleContext(i, String_charactersContext);
-    }
+  public STRING(): TerminalNode {
+    return this.getToken(Rust2Parser.STRING, 0);
   }
   constructor(parent: ParserRuleContext | undefined, invokingState: number) {
     super(parent, invokingState);
@@ -3862,36 +4200,6 @@ export class String_literalContext extends ParserRuleContext {
   public accept<Result>(visitor: Rust2Visitor<Result>): Result {
     if (visitor.visitString_literal) {
       return visitor.visitString_literal(this);
-    } else {
-      return visitor.visitChildren(this);
-    }
-  }
-}
-
-export class String_charactersContext extends ParserRuleContext {
-  constructor(parent: ParserRuleContext | undefined, invokingState: number) {
-    super(parent, invokingState);
-  }
-  // @Override
-  public get ruleIndex(): number {
-    return Rust2Parser.RULE_string_characters;
-  }
-  // @Override
-  public enterRule(listener: Rust2Listener): void {
-    if (listener.enterString_characters) {
-      listener.enterString_characters(this);
-    }
-  }
-  // @Override
-  public exitRule(listener: Rust2Listener): void {
-    if (listener.exitString_characters) {
-      listener.exitString_characters(this);
-    }
-  }
-  // @Override
-  public accept<Result>(visitor: Rust2Visitor<Result>): Result {
-    if (visitor.visitString_characters) {
-      return visitor.visitString_characters(this);
     } else {
       return visitor.visitChildren(this);
     }
@@ -3938,6 +4246,9 @@ export class TypeContext extends ParserRuleContext {
 }
 
 export class Primitive_typeContext extends ParserRuleContext {
+  public generic_mutex_type(): Generic_mutex_typeContext | undefined {
+    return this.tryGetRuleContext(0, Generic_mutex_typeContext);
+  }
   constructor(parent: ParserRuleContext | undefined, invokingState: number) {
     super(parent, invokingState);
   }
@@ -3961,6 +4272,39 @@ export class Primitive_typeContext extends ParserRuleContext {
   public accept<Result>(visitor: Rust2Visitor<Result>): Result {
     if (visitor.visitPrimitive_type) {
       return visitor.visitPrimitive_type(this);
+    } else {
+      return visitor.visitChildren(this);
+    }
+  }
+}
+
+export class Generic_mutex_typeContext extends ParserRuleContext {
+  public type(): TypeContext {
+    return this.getRuleContext(0, TypeContext);
+  }
+  constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+    super(parent, invokingState);
+  }
+  // @Override
+  public get ruleIndex(): number {
+    return Rust2Parser.RULE_generic_mutex_type;
+  }
+  // @Override
+  public enterRule(listener: Rust2Listener): void {
+    if (listener.enterGeneric_mutex_type) {
+      listener.enterGeneric_mutex_type(this);
+    }
+  }
+  // @Override
+  public exitRule(listener: Rust2Listener): void {
+    if (listener.exitGeneric_mutex_type) {
+      listener.exitGeneric_mutex_type(this);
+    }
+  }
+  // @Override
+  public accept<Result>(visitor: Rust2Visitor<Result>): Result {
+    if (visitor.visitGeneric_mutex_type) {
+      return visitor.visitGeneric_mutex_type(this);
     } else {
       return visitor.visitChildren(this);
     }

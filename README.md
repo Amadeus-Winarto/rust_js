@@ -43,3 +43,5 @@ You can run the code using the following command:
 ```bash
 npm run main
 ```
+
+This should host the server on `localhost:8080`. Go to the browser and type `localhost:8080` to see the output.

@@ -1,6 +1,6 @@
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import { Result } from "../utils";
-import OpCodes from "./opcodes";
+import OpCodes from "../common/opcodes";
 
 export type Operand = number | string;
 export class Instruction {
@@ -15,7 +15,7 @@ export class Instruction {
 
 export type Instructions = Instruction[];
 
-export type SVMFunction = {
+export type RVMFunction = {
   stack_size: number;
   environment_size: number;
   num_args: number;
@@ -24,7 +24,7 @@ export type SVMFunction = {
 
 export type Program = {
   entry_point: number | undefined;
-  functions: SVMFunction[];
+  functions: RVMFunction[];
 };
 
 export class CompilerError extends Error {
@@ -125,7 +125,7 @@ export class Environment {
   }
 
   lookup(name: string): number | undefined {
-    const index = this.names.indexOf(name);
+    const index = this.names.lastIndexOf(name);
     if (index !== -1) {
       return index;
     }

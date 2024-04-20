@@ -7,3 +7,5 @@ samples/target
 
 # Ignore outputs
 output
+dist
+src/**/*.js

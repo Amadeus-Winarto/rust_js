@@ -11,6 +11,10 @@ import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
+import { Break_keywordContext } from "./Rust2Parser";
+import { Loop_expressionContext } from "./Rust2Parser";
+import { Infinite_loopContext } from "./Rust2Parser";
+import { While_loopContext } from "./Rust2Parser";
 import { Refed_nameContext } from "./Rust2Parser";
 import { Immutable_refed_nameContext } from "./Rust2Parser";
 import { Mutable_refed_nameContext } from "./Rust2Parser";
@@ -18,6 +22,7 @@ import { Derefed_nameContext } from "./Rust2Parser";
 import { AssignmentContext } from "./Rust2Parser";
 import { ClosureContext } from "./Rust2Parser";
 import { Closure_parameter_listContext } from "./Rust2Parser";
+import { Immediate_closure_applicationContext } from "./Rust2Parser";
 import { Parens_expressionContext } from "./Rust2Parser";
 import { If_expressionContext } from "./Rust2Parser";
 import { Cond_exprContext } from "./Rust2Parser";
@@ -37,9 +42,9 @@ import { Integer_literalContext } from "./Rust2Parser";
 import { Float_literalContext } from "./Rust2Parser";
 import { Boolean_literalContext } from "./Rust2Parser";
 import { String_literalContext } from "./Rust2Parser";
-import { String_charactersContext } from "./Rust2Parser";
 import { TypeContext } from "./Rust2Parser";
 import { Primitive_typeContext } from "./Rust2Parser";
+import { Generic_mutex_typeContext } from "./Rust2Parser";
 import { Borrowed_typeContext } from "./Rust2Parser";
 import { Borrowed_mutable_typeContext } from "./Rust2Parser";
 import { Print_macroContext } from "./Rust2Parser";
@@ -153,6 +158,50 @@ export interface Rust2Listener extends ParseTreeListener {
   exitExpression?: (ctx: ExpressionContext) => void;
 
   /**
+   * Enter a parse tree produced by `Rust2Parser.break_keyword`.
+   * @param ctx the parse tree
+   */
+  enterBreak_keyword?: (ctx: Break_keywordContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.break_keyword`.
+   * @param ctx the parse tree
+   */
+  exitBreak_keyword?: (ctx: Break_keywordContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.loop_expression`.
+   * @param ctx the parse tree
+   */
+  enterLoop_expression?: (ctx: Loop_expressionContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.loop_expression`.
+   * @param ctx the parse tree
+   */
+  exitLoop_expression?: (ctx: Loop_expressionContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.infinite_loop`.
+   * @param ctx the parse tree
+   */
+  enterInfinite_loop?: (ctx: Infinite_loopContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.infinite_loop`.
+   * @param ctx the parse tree
+   */
+  exitInfinite_loop?: (ctx: Infinite_loopContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.while_loop`.
+   * @param ctx the parse tree
+   */
+  enterWhile_loop?: (ctx: While_loopContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.while_loop`.
+   * @param ctx the parse tree
+   */
+  exitWhile_loop?: (ctx: While_loopContext) => void;
+
+  /**
    * Enter a parse tree produced by `Rust2Parser.refed_name`.
    * @param ctx the parse tree
    */
@@ -228,6 +277,21 @@ export interface Rust2Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitClosure_parameter_list?: (ctx: Closure_parameter_listContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.immediate_closure_application`.
+   * @param ctx the parse tree
+   */
+  enterImmediate_closure_application?: (
+    ctx: Immediate_closure_applicationContext,
+  ) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.immediate_closure_application`.
+   * @param ctx the parse tree
+   */
+  exitImmediate_closure_application?: (
+    ctx: Immediate_closure_applicationContext,
+  ) => void;
 
   /**
    * Enter a parse tree produced by `Rust2Parser.parens_expression`.
@@ -439,17 +503,6 @@ export interface Rust2Listener extends ParseTreeListener {
   exitString_literal?: (ctx: String_literalContext) => void;
 
   /**
-   * Enter a parse tree produced by `Rust2Parser.string_characters`.
-   * @param ctx the parse tree
-   */
-  enterString_characters?: (ctx: String_charactersContext) => void;
-  /**
-   * Exit a parse tree produced by `Rust2Parser.string_characters`.
-   * @param ctx the parse tree
-   */
-  exitString_characters?: (ctx: String_charactersContext) => void;
-
-  /**
    * Enter a parse tree produced by `Rust2Parser.type`.
    * @param ctx the parse tree
    */
@@ -470,6 +523,17 @@ export interface Rust2Listener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   exitPrimitive_type?: (ctx: Primitive_typeContext) => void;
+
+  /**
+   * Enter a parse tree produced by `Rust2Parser.generic_mutex_type`.
+   * @param ctx the parse tree
+   */
+  enterGeneric_mutex_type?: (ctx: Generic_mutex_typeContext) => void;
+  /**
+   * Exit a parse tree produced by `Rust2Parser.generic_mutex_type`.
+   * @param ctx the parse tree
+   */
+  exitGeneric_mutex_type?: (ctx: Generic_mutex_typeContext) => void;
 
   /**
    * Enter a parse tree produced by `Rust2Parser.borrowed_type`.

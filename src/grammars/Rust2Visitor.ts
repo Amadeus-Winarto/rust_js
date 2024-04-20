@@ -11,6 +11,10 @@ import { MutableContext } from "./Rust2Parser";
 import { Function_declarationContext } from "./Rust2Parser";
 import { Return_expressionContext } from "./Rust2Parser";
 import { ExpressionContext } from "./Rust2Parser";
+import { Break_keywordContext } from "./Rust2Parser";
+import { Loop_expressionContext } from "./Rust2Parser";
+import { Infinite_loopContext } from "./Rust2Parser";
+import { While_loopContext } from "./Rust2Parser";
 import { Refed_nameContext } from "./Rust2Parser";
 import { Immutable_refed_nameContext } from "./Rust2Parser";
 import { Mutable_refed_nameContext } from "./Rust2Parser";
@@ -18,6 +22,7 @@ import { Derefed_nameContext } from "./Rust2Parser";
 import { AssignmentContext } from "./Rust2Parser";
 import { ClosureContext } from "./Rust2Parser";
 import { Closure_parameter_listContext } from "./Rust2Parser";
+import { Immediate_closure_applicationContext } from "./Rust2Parser";
 import { Parens_expressionContext } from "./Rust2Parser";
 import { If_expressionContext } from "./Rust2Parser";
 import { Cond_exprContext } from "./Rust2Parser";
@@ -37,9 +42,9 @@ import { Integer_literalContext } from "./Rust2Parser";
 import { Float_literalContext } from "./Rust2Parser";
 import { Boolean_literalContext } from "./Rust2Parser";
 import { String_literalContext } from "./Rust2Parser";
-import { String_charactersContext } from "./Rust2Parser";
 import { TypeContext } from "./Rust2Parser";
 import { Primitive_typeContext } from "./Rust2Parser";
+import { Generic_mutex_typeContext } from "./Rust2Parser";
 import { Borrowed_typeContext } from "./Rust2Parser";
 import { Borrowed_mutable_typeContext } from "./Rust2Parser";
 import { Print_macroContext } from "./Rust2Parser";
@@ -120,6 +125,34 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
   visitExpression?: (ctx: ExpressionContext) => Result;
 
   /**
+   * Visit a parse tree produced by `Rust2Parser.break_keyword`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitBreak_keyword?: (ctx: Break_keywordContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.loop_expression`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitLoop_expression?: (ctx: Loop_expressionContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.infinite_loop`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitInfinite_loop?: (ctx: Infinite_loopContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.while_loop`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitWhile_loop?: (ctx: While_loopContext) => Result;
+
+  /**
    * Visit a parse tree produced by `Rust2Parser.refed_name`.
    * @param ctx the parse tree
    * @return the visitor result
@@ -167,6 +200,15 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitClosure_parameter_list?: (ctx: Closure_parameter_listContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.immediate_closure_application`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitImmediate_closure_application?: (
+    ctx: Immediate_closure_applicationContext,
+  ) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.parens_expression`.
@@ -304,13 +346,6 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
   visitString_literal?: (ctx: String_literalContext) => Result;
 
   /**
-   * Visit a parse tree produced by `Rust2Parser.string_characters`.
-   * @param ctx the parse tree
-   * @return the visitor result
-   */
-  visitString_characters?: (ctx: String_charactersContext) => Result;
-
-  /**
    * Visit a parse tree produced by `Rust2Parser.type`.
    * @param ctx the parse tree
    * @return the visitor result
@@ -323,6 +358,13 @@ export interface Rust2Visitor<Result> extends ParseTreeVisitor<Result> {
    * @return the visitor result
    */
   visitPrimitive_type?: (ctx: Primitive_typeContext) => Result;
+
+  /**
+   * Visit a parse tree produced by `Rust2Parser.generic_mutex_type`.
+   * @param ctx the parse tree
+   * @return the visitor result
+   */
+  visitGeneric_mutex_type?: (ctx: Generic_mutex_typeContext) => Result;
 
   /**
    * Visit a parse tree produced by `Rust2Parser.borrowed_type`.

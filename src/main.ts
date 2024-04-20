@@ -1,6 +1,3 @@
-import { createInterface } from "readline";
-import { existsSync, readFileSync } from "fs";
-
 import { CharStreams, CommonTokenStream } from "antlr4ts";
 import { Rust2Lexer as RustLexer } from "./grammars/Rust2Lexer";
 import { Rust2Parser as RustParser } from "./grammars/Rust2Parser";
@@ -9,63 +6,59 @@ import { Validator } from "./validators/types";
 import { SyntaxValidator } from "./validators/syntax";
 import { EntrypointValidator } from "./validators/entrypoint";
 import { DeclarationValidator } from "./validators/declaration";
-import { TypeSystemValidator } from "./validators/type_system";
+import { TypeProducer, TypeSystemValidator } from "./validators/type_system";
 
 import { Rust2Compiler } from "./compilers/rust2_compiler";
-import { OpCodes } from "./compilers/opcodes";
-import { saveJson } from "./utils";
-import { Instruction } from "./compilers/compiler";
+import { OpCodes } from "./common/opcodes";
+import { toProgramArray } from "./utils";
+import { Instruction, Program } from "./compilers/compiler";
 import { BorrowCheckerValidator } from "./validators/borrow_checker";
 
+import { runWithProgram } from "./vm/vm";
+import * as monaco from "monaco-editor";
+
+const editor = monaco.editor.create(document.getElementById("editor")!, {
+  value: "",
+  language: "rust",
+  lineNumbers: "on",
+  roundedSelection: false,
+  scrollBeyondLastLine: false,
+  readOnly: false,
+  theme: "vs-light",
+  fontFamily: "Courier New",
+  fontSize: 16,
+});
+
 const DEBUG_MODE = false;
-const get_basename = (filename: string) => filename.split(/[\\/]/).pop();
 const instruction_to_string = (instruction: Instruction) => {
   return `${OpCodes[instruction.opcode]} \t${instruction.operands.join("\t")}`;
 };
 
-async function blocking_input() {
-  if (process.env.npm_config_filename) {
-    return process.env.npm_config_filename;
-  }
+const compiler_output = document.getElementById(
+  "compiler_output",
+) as HTMLInputElement;
+const vm_output = document.getElementById("output") as HTMLInputElement;
 
-  let input_string = undefined;
-  let rl = createInterface(process.stdin, process.stdout);
-  rl.question("Enter the filename: ", (input) => {
-    input_string = input;
-  });
-
-  while (input_string === undefined) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  return input_string;
+function logToCompilerOutput(...message: any) {
+  // Append the new message to the existing content
+  compiler_output.value += message + "\n";
+  // Scroll to the bottom to show the latest message
+  // output.scrollTop = output.scrollHeight;
 }
 
-function is_file(filename: string): boolean {
-  // Check if file exists
-  if (!existsSync(filename)) {
-    console.error("ERROR: file ", filename, " does not exist");
-    return false;
-  }
-
-  // Check if file is a .rs file
-  return filename.endsWith(".rs");
+function clearCompilerOutput() {
+  compiler_output.value = "";
 }
 
-// Main function
-async function main() {
-  const input_string = await blocking_input();
-  let is_input_file = false;
-  const program_string = (function () {
-    if (!is_file(input_string)) {
-      console.log("Interpreting input as program string!");
-      return input_string;
-    } else {
-      is_input_file = true;
-      return readFileSync(input_string, "utf8");
-    }
-  })();
+function clearVMOutput() {
+  vm_output.value = "";
+}
 
-  console.log("Program:\n ", program_string);
+let compiled_code: Program | undefined = undefined;
+
+function compileCode() {
+  const program_string = editor.getValue();
+  clearCompilerOutput();
 
   // Create the lexer and parser
   const inputStream = CharStreams.fromString(program_string);
@@ -75,70 +68,111 @@ async function main() {
 
   // Attach the error handler
   parser.removeErrorListeners();
+  let parser_error = false;
   parser.addErrorListener({
     syntaxError: function (recognizer, offendingSymbol, line, column, msg, e) {
-      console.error(`Syntax error at line ${line} column ${column} -> ${msg}`);
-      process.exit(1);
+      logToCompilerOutput(
+        `Syntax error at line ${line} column ${column} -> ${msg}`,
+      );
+      parser_error = true;
+      return;
     },
   });
 
   // Parse the input (this is the entry point for the grammar)
   const tree = parser.program();
+  if (parser_error) {
+    logToCompilerOutput("Parsing failed! ");
+    return;
+  }
 
   // Build the list of validators
   const validators: Validator[] = [
-    new SyntaxValidator(DEBUG_MODE),
-    new EntrypointValidator(DEBUG_MODE),
-    new DeclarationValidator(DEBUG_MODE),
-    new TypeSystemValidator(DEBUG_MODE),
-    new BorrowCheckerValidator(DEBUG_MODE),
+    new SyntaxValidator(compiler_output, DEBUG_MODE),
+    new EntrypointValidator(compiler_output, DEBUG_MODE),
+    new DeclarationValidator(compiler_output, DEBUG_MODE),
+    new TypeSystemValidator(compiler_output, DEBUG_MODE),
+    new BorrowCheckerValidator(compiler_output, DEBUG_MODE),
   ];
-  console.log("Validating...");
+  logToCompilerOutput("Validating...");
   for (const validator of validators) {
     const result = validator.visit(tree);
-    console.log("\t", validator.rule_name, ":", result);
+    logToCompilerOutput("\t" + validator.rule_name + ":" + result);
     if (!result) {
-      console.error("Validation failed!");
-      process.exit(1);
+      logToCompilerOutput("Validation failed! ");
+      return;
     }
   }
-  console.log("Validation passed!");
-  console.log();
+  logToCompilerOutput("Validation passed!");
+  logToCompilerOutput("");
+
+  // The compiler requires some information from the validators
+  const type_producer = new TypeProducer(DEBUG_MODE);
+  type_producer.visit(tree);
+  const closure_map = type_producer.getClosureMap();
 
   // Compile the program
-  const compiler = new Rust2Compiler(DEBUG_MODE);
-  console.log("Compiling...");
+  const compiler = new Rust2Compiler(closure_map, DEBUG_MODE);
+  logToCompilerOutput("Compiling...");
   const result = compiler.visit(tree);
   if (!result.ok) {
-    console.error(result.error);
-    process.exit(1);
+    logToCompilerOutput(result.error);
+    return;
   }
-  console.log("Compilation passed!");
-  const program = result.value;
+  logToCompilerOutput("Compilation passed!");
+  compiled_code = result.value;
+  let program = result.value;
 
-  saveJson(
-    program,
-    "output/" +
-      (is_input_file ? get_basename(input_string) + ".json" : "output.json"),
-  );
-
-  console.log("Program: ");
-  console.log("\tEntry function: ", program.entry_point);
-  console.log("\tFunctions: ");
+  logToCompilerOutput("Entry function: " + program.entry_point);
+  logToCompilerOutput("Functions: ");
   for (const func of program.functions) {
-    console.log("\t\tStack size: ", func.stack_size);
-    console.log("\t\tEnvironment size: ", func.environment_size);
-    console.log("\t\tNum args: ", func.num_args);
+    logToCompilerOutput("\tStack size: " + func.stack_size);
+    logToCompilerOutput("\tEnvironment size: " + func.environment_size);
+    logToCompilerOutput("\tNum args: " + func.num_args);
 
-    console.log("\t\tInstructions: ");
+    logToCompilerOutput("\tInstructions: ");
     let instr_idx = 0;
     for (const instr of func.instructions) {
-      console.log("\t\t\t", instr_idx, " : ", instruction_to_string(instr));
+      logToCompilerOutput(
+        "\t\t" + instr_idx + " : " + instruction_to_string(instr),
+      );
       instr_idx++;
     }
-    console.log();
+    logToCompilerOutput();
   }
-  process.exit(0);
+  return;
 }
 
-main();
+document.getElementById("compileBtn")?.addEventListener("click", compileCode);
+
+export function runCode() {
+  // clear output window
+  clearVMOutput();
+  var heapSize = (document.getElementById("heapSize") as HTMLInputElement)
+    .value as unknown as number;
+  var numWorkers = (document.getElementById("workers") as HTMLInputElement)
+    .value as unknown as number;
+  // Call your runtime system function passing the compiled code
+  if (compiled_code === undefined) {
+    console.log("No compiled code found. Compiling...");
+    compileCode();
+  }
+
+  if (compiled_code === undefined) {
+    vm_output.value = "Compilation failed. \n";
+    return;
+  } else {
+    console.log("Code compiled successfully!");
+  }
+
+  runWithProgram(
+    toProgramArray(compiled_code),
+    heapSize,
+    numWorkers,
+    vm_output,
+  );
+
+  compiled_code = undefined;
+}
+
+document.getElementById("runBtn")?.addEventListener("click", runCode);
