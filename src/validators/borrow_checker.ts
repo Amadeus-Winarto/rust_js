@@ -335,7 +335,7 @@ class BorrowChecker
 
   visitClosure(ctx: ClosureContext): Result<boolean> {
     // First, make sure borrowing rules are followed in the body
-    const result = this.visit(ctx.function_body());
+    const result = this.visitBlock(ctx.function_body().block(), false);
     if (!result.ok) {
       return result;
     }
@@ -354,7 +354,12 @@ class BorrowChecker
     };
   }
 
-  visitBlock(ctx: BlockContext): Result<boolean> {
+  visitBlock(
+    ctx: BlockContext,
+    should_restore_scopes: boolean = true,
+  ): Result<boolean> {
+    const scope_length = this.lender_scopes.length;
+
     this.lender_scopes.push(new Map());
     this.borrower_scopes.push(new Map());
     this.moved_scopes.push([]);
@@ -365,22 +370,25 @@ class BorrowChecker
       return result;
     }
 
-    const restoration_result = restore_scopes(
-      this.borrower_scopes,
-      this.lender_scopes,
-      this.moved_scopes,
-      this.capture_scopes,
-    );
-    if (!restoration_result) {
-      return {
-        ok: false,
-        error: new BorrowCheckerError(
-          `Failed to restore scopes. This is likely a BorrowChecker bug.`,
-          ctx.start.line,
-        ),
-      };
+    if (should_restore_scopes) {
+      for (let i = 0; i < scope_length; i++) {
+        const restoration_result = restore_scopes(
+          this.borrower_scopes,
+          this.lender_scopes,
+          this.moved_scopes,
+          this.capture_scopes,
+        );
+        if (!restoration_result) {
+          return {
+            ok: false,
+            error: new BorrowCheckerError(
+              `Failed to restore scopes. This is likely a BorrowChecker bug.`,
+              ctx.start.line,
+            ),
+          };
+        }
+      }
     }
-
     return {
       ok: true,
       value: true,
@@ -537,7 +545,7 @@ class BorrowChecker
         return {
           ok: false,
           error: new BorrowCheckerError(
-            `Cannot borrow ${lender_name} as mutable`,
+            `Cannot borrow ${lender_name} as immutable because it is also borrowed as mutable`,
             ctx.start.line,
           ),
         };
