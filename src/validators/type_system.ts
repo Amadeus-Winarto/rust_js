@@ -324,9 +324,14 @@ class TypeProducer
     }
 
     // Check if expression is a name with type borrow
+
+    // Things that are moved:
+    // 1. pure names that cross closure barrier (captured) [Clone] // TODO: Implement this
+    // 2. mutable references [Move]
+    //
     if (
       ctx.expression().name() !== undefined &&
-      (is_borrow(expression_type.value.type) ||
+      (is_mutable_borrow(expression_type.value.type) ||
         expression_type.value.type === PrimitiveTypeTag.function ||
         expression_type.value.type === PrimitiveTypeTag.join_handle)
     ) {
