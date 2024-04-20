@@ -1680,7 +1680,7 @@ class Rust2InstructionCompiler
     }
     for (const instr of instructions) {
       if (instr.opcode === OpCodes.NEWENV && instr.operands[0] === "TODO") {
-        instr.operands = [num_allocs];
+        instr.operands = [num_allocs + copied_names.length];
       }
     }
 
