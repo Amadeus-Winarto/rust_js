@@ -1389,6 +1389,36 @@ export class TypeProducer
     }
 
     if (function_name === "println!") {
+      // Prevent the printing of certain types
+      if (maybe_args === undefined) {
+        return {
+          ok: true,
+          value: new TypeAnnotation(PrimitiveTypeTag.empty),
+        };
+      }
+
+      const expressions = maybe_args.expression();
+      for (const [i, expression] of expressions.entries()) {
+        const arg_type = this.visit(expression);
+        if (!arg_type.ok) {
+          return arg_type;
+        }
+
+        if (
+          arg_type.value.type === PrimitiveTypeTag.mutex ||
+          arg_type.value.type === PrimitiveTypeTag.join_handle ||
+          arg_type.value.type === PrimitiveTypeTag.function
+        ) {
+          return {
+            ok: false,
+            error: new TypeError(
+              `println! does not support printing of type ${type_tag_to_value(arg_type.value.type)} for argument ${i}`,
+              ctx.start.line,
+            ),
+          };
+        }
+      }
+
       return {
         ok: true,
         value: new TypeAnnotation(PrimitiveTypeTag.empty),
