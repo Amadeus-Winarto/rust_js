@@ -833,7 +833,10 @@ export class BorrowCheckerValidator
   rule_name: string = "Borrow Checker";
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
-  constructor(debug_mode: boolean) {
+  constructor(
+    private compiler_output: HTMLInputElement,
+    debug_mode: boolean,
+  ) {
     super();
     this.print_fn = print(debug_mode);
   }
@@ -852,7 +855,7 @@ export class BorrowCheckerValidator
     const results = borrow_checker.visit(ctx);
 
     if (!results.ok) {
-      console.error(results.error);
+      this.compiler_output.value = results.error.message + "\n";
       return false;
     }
 

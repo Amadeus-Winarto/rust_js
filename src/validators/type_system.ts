@@ -1867,7 +1867,10 @@ export class TypeSystemValidator
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
   private type_producer: TypeProducer;
 
-  constructor(private debug_mode: boolean) {
+  constructor(
+    private compiler_output: HTMLInputElement,
+    private debug_mode: boolean,
+  ) {
     super();
     this.print_fn = print(debug_mode);
     this.type_producer = new TypeProducer(debug_mode);
@@ -1886,7 +1889,7 @@ export class TypeSystemValidator
     const program_type = this.type_producer.visit(ctx);
 
     if (!program_type.ok) {
-      console.error(program_type.error);
+      this.compiler_output.value = program_type.error.message;
       return false;
     }
 

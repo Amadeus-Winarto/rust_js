@@ -75,11 +75,11 @@ function compileCode() {
 
   // Build the list of validators
   const validators: Validator[] = [
-    new SyntaxValidator(DEBUG_MODE),
-    new EntrypointValidator(DEBUG_MODE),
-    new DeclarationValidator(DEBUG_MODE),
-    new TypeSystemValidator(DEBUG_MODE),
-    new BorrowCheckerValidator(DEBUG_MODE),
+    new SyntaxValidator(compiler_output, DEBUG_MODE),
+    new EntrypointValidator(compiler_output, DEBUG_MODE),
+    new DeclarationValidator(compiler_output, DEBUG_MODE),
+    new TypeSystemValidator(compiler_output, DEBUG_MODE),
+    new BorrowCheckerValidator(compiler_output, DEBUG_MODE),
   ];
   logToCompilerOutput("Validating...");
   for (const validator of validators) {

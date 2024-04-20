@@ -278,7 +278,10 @@ export class DeclarationValidator
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
   private rule_validator: DeclarationRuleValidator;
 
-  constructor(debug_mode: boolean) {
+  constructor(
+    private compiler_output: HTMLInputElement,
+    debug_mode: boolean,
+  ) {
     super();
     this.print_fn = print(debug_mode);
     this.rule_validator = new DeclarationRuleValidator(debug_mode);
@@ -300,7 +303,7 @@ export class DeclarationValidator
       this.print_fn("Declarations are legal");
       return true;
     } else {
-      console.error(has_legal_syntax.error);
+      this.compiler_output.value = has_legal_syntax.error.message;
       return false;
     }
   }

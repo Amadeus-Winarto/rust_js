@@ -10,7 +10,10 @@ export class EntrypointValidator
   rule_name: string = "Entrypoint";
   private print_fn: (message?: any, ...optionalParams: any[]) => void;
 
-  constructor(debug_mode: boolean) {
+  constructor(
+    private compiler_output: HTMLInputElement,
+    debug_mode: boolean,
+  ) {
     super();
     this.print_fn = print(debug_mode);
   }
@@ -34,15 +37,15 @@ export class EntrypointValidator
 
     if (function_declarations.length === 0) {
       this.print_fn("No main function found");
-      console.error("SyntaxError: Rust programs require a main function!");
+      this.compiler_output.value =
+        "SyntaxError: Rust programs require a main function!";
       return false;
     }
 
     if (function_declarations.length > 1) {
-      console.error(
-        "SyntaxError: Rust programs can only have one main function. Found ",
-        function_declarations.length,
-      );
+      this.compiler_output.value =
+        "SyntaxError: Rust programs can only have one main function. Found " +
+        function_declarations.length;
       return false;
     }
 
@@ -51,17 +54,17 @@ export class EntrypointValidator
       main_function_ctx!.parameter_list()?.parameters()?.parameter() ===
       undefined;
     if (!has_no_parameter) {
-      console.error("SyntaxError: main function should not have parameters");
+      this.compiler_output.value =
+        "SyntaxError: main function should not have parameters";
       return false;
     }
 
     const has_return_type = main_function_ctx!.type().text === "()";
     if (!has_return_type) {
-      console.error(
-        "SyntaxError: main function should have return type (). Got ",
-        main_function_ctx!.type().text,
-        " instead",
-      );
+      this.compiler_output.value =
+        "SyntaxError: main function should have return type (). Got " +
+        main_function_ctx!.type().text +
+        " instead";
       return false;
     }
 
