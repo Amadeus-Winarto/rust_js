@@ -9,7 +9,7 @@ import { DeclarationValidator } from "./validators/declaration";
 import { TypeSystemValidator } from "./validators/type_system";
 
 import { Rust2Compiler } from "./compilers/rust2_compiler";
-import { OpCodes } from "./compilers/opcodes";
+import { OpCodes } from "./common/opcodes";
 import { toProgramArray } from "./utils";
 import { Instruction, Program } from "./compilers/compiler";
 import { BorrowCheckerValidator } from "./validators/borrow_checker";

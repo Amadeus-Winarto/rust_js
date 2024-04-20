@@ -1,6 +1,6 @@
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import { Result } from "../utils";
-import OpCodes from "./opcodes";
+import OpCodes from "../common/opcodes";
 
 export type Operand = number | string;
 export class Instruction {

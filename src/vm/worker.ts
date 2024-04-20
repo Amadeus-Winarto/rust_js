@@ -7,7 +7,7 @@ import {
   Program,
   RVMFunction,
 } from "./compiler";
-import { OpCodes } from "./opcode";
+import { OpCodes } from "../common/opcodes";
 import { FUNC_CODE_OFFSET, LockId, Syscall } from "./vm";
 import { threadId } from "worker_threads";
 
@@ -1088,7 +1088,7 @@ M[OpCodes.NEWT] = () => {
 };
 
 M[OpCodes.ENDT] = () => {
-  EOT = true
+  EOT = true;
   // PC = P.length;
 };
 
@@ -1104,7 +1104,7 @@ M[OpCodes.JOIN] = () => {
     if (G === JOIN_THREAD_NOT_EXITED) {
       STATUS = ThreadStatus.BLOCKED;
     }
-    OS.pop() // pop out closure loaded before calling NEWT
+    OS.pop(); // pop out closure loaded before calling NEWT
   } else {
     throw Error("Join expects a Thread Id to be on top of OS");
   }

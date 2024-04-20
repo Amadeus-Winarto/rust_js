@@ -40,7 +40,7 @@ import {
   Mutable_refed_nameContext,
 } from "../grammars/Rust2Parser";
 import { Rust2CompileTimeEvaluator } from "./rust2_compile_time_evaluator";
-import OpCodes from "./opcodes";
+import OpCodes from "../common/opcodes";
 import { Rust2Visitor as RustVisitor } from "../grammars/Rust2Visitor";
 import { PreBuiltFunctions } from "../preamble/preamble";
 
